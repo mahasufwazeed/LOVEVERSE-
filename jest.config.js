@@ -7,6 +7,6 @@ module.exports = {
     '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: { strict: false, allowJs: true } }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(three)/)',
+    'node_modules/(?!(three|@noble)/)',
   ],
 };

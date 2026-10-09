@@ -475,3 +475,297 @@ create policy history_select on public.room_edit_history for select to authentic
 alter publication supabase_realtime add table public.rooms;
 alter publication supabase_realtime add table public.room_objects;
 
+-- ==============================================================================
+-- 12. LOVEVERSE SECURE E2EE PRIVATE MESSENGER & ENCRYPTED MEDIA VAULT
+-- ==============================================================================
+
+-- 12.1 E2EE Verified Conversations
+create table if not exists public.conversations (
+    id uuid primary key default gen_random_uuid(),
+    couple_space_id uuid not null references public.spaces(id) on delete cascade,
+    created_at timestamptz not null default now(),
+    last_message_at timestamptz default now(),
+    is_active boolean not null default true,
+    unique(couple_space_id)
+);
+
+create table if not exists public.conversation_members (
+    conversation_id uuid not null references public.conversations(id) on delete cascade,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    joined_at timestamptz not null default now(),
+    primary key(conversation_id, user_id)
+);
+
+-- 12.2 Device Identity & Cryptographic Prekeys
+create table if not exists public.device_identities (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    device_id text not null,
+    identity_key text not null,
+    signed_prekey text not null,
+    prekey_signature text not null,
+    registration_id integer not null default 1,
+    safety_number text not null,
+    is_verified boolean not null default false,
+    verified_at timestamptz,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique(user_id, device_id)
+);
+
+create table if not exists public.device_prekeys (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    device_id text not null,
+    key_id integer not null,
+    public_key text not null,
+    is_consumed boolean not null default false,
+    consumed_at timestamptz,
+    created_at timestamptz not null default now()
+);
+
+-- 12.3 Disappearing Message Policy
+create table if not exists public.disappearing_message_policies (
+    conversation_id uuid primary key references public.conversations(id) on delete cascade,
+    duration_seconds integer not null default 0, -- 0 = Off, 30, 300, 3600, 86400, 604800
+    updated_by uuid references auth.users(id),
+    updated_at timestamptz not null default now()
+);
+
+-- 12.4 Encrypted Messages (E2EE Ciphertext Only)
+create table if not exists public.encrypted_messages (
+    id uuid primary key default gen_random_uuid(),
+    conversation_id uuid not null references public.conversations(id) on delete cascade,
+    sender_id uuid not null references auth.users(id),
+    sender_device_id text not null,
+    recipient_id uuid not null references auth.users(id),
+    recipient_device_id text not null,
+    ciphertext text not null,
+    iv text not null,
+    tag text not null,
+    ephemeral_public_key text not null,
+    message_type text not null default 'text', -- 'text', 'photo', 'video', 'voice', 'sticker'
+    is_disappearing boolean not null default false,
+    expires_at timestamptz,
+    reply_to_id uuid references public.encrypted_messages(id) on delete set null,
+    is_edited boolean not null default false,
+    created_at timestamptz not null default now()
+);
+
+-- 12.5 Client-Encrypted Media Attachments & Vault Gallery
+create table if not exists public.encrypted_attachments (
+    id uuid primary key default gen_random_uuid(),
+    message_id uuid references public.encrypted_messages(id) on delete cascade,
+    conversation_id uuid not null references public.conversations(id) on delete cascade,
+    uploader_id uuid not null references auth.users(id),
+    file_path text not null,
+    bucket_id text not null default 'encrypted-media',
+    mime_type text not null,
+    file_size_bytes bigint not null default 0,
+    iv text not null,
+    ciphertext_hash text not null,
+    encrypted_metadata text, -- client-side encrypted caption, title, dimensions
+    is_gallery boolean not null default false,
+    album_id uuid,
+    is_favorite boolean not null default false,
+    created_at timestamptz not null default now()
+);
+
+-- 12.6 Message Delivery & Read Receipts
+create table if not exists public.message_receipts (
+    id uuid primary key default gen_random_uuid(),
+    message_id uuid not null references public.encrypted_messages(id) on delete cascade,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    status text not null, -- 'sent', 'delivered', 'read'
+    timestamp timestamptz not null default now(),
+    unique(message_id, user_id, status)
+);
+
+-- 12.7 Media Upload Sessions (Resumable & Cancellation Tracking)
+create table if not exists public.media_upload_sessions (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    conversation_id uuid not null references public.conversations(id) on delete cascade,
+    file_name text not null,
+    file_size bigint not null,
+    status text not null default 'initiated', -- 'initiated', 'uploading', 'completed', 'cancelled', 'failed'
+    upload_progress integer not null default 0,
+    expires_at timestamptz not null default (now() + interval '2 hours'),
+    created_at timestamptz not null default now()
+);
+
+-- 12.8 Security Events Audit Log
+create table if not exists public.security_events (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    event_type text not null, -- 'key_rotation', 'safety_number_changed', 'device_registered', 'partner_verified', 'app_lock_failure', 'tamper_detected'
+    event_metadata jsonb not null default '{}'::jsonb,
+    ip_address_hash text,
+    created_at timestamptz not null default now()
+);
+
+-- Private Storage Buckets
+insert into storage.buckets (id, name, public) 
+values ('encrypted-media', 'encrypted-media', false)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public) 
+values ('encrypted-gallery', 'encrypted-gallery', false)
+on conflict (id) do nothing;
+
+-- 12.9 Row Level Security (RLS) Policies
+alter table public.conversations enable row level security;
+alter table public.conversation_members enable row level security;
+alter table public.device_identities enable row level security;
+alter table public.device_prekeys enable row level security;
+alter table public.disappearing_message_policies enable row level security;
+alter table public.encrypted_messages enable row level security;
+alter table public.encrypted_attachments enable row level security;
+alter table public.message_receipts enable row level security;
+alter table public.media_upload_sessions enable row level security;
+alter table public.security_events enable row level security;
+
+-- Conversations RLS
+drop policy if exists conversations_select on public.conversations;
+create policy conversations_select on public.conversations for select to authenticated
+    using (couple_space_id = public.my_space());
+
+drop policy if exists conversations_insert on public.conversations;
+create policy conversations_insert on public.conversations for insert to authenticated
+    with check (couple_space_id = public.my_space());
+
+-- Conversation Members RLS
+drop policy if exists conv_members_select on public.conversation_members;
+create policy conv_members_select on public.conversation_members for select to authenticated
+    using (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+drop policy if exists conv_members_insert on public.conversation_members;
+create policy conv_members_insert on public.conversation_members for insert to authenticated
+    with check (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+-- Device Identities RLS (Users can view their own and partner's device identity in the same space)
+drop policy if exists device_identities_select on public.device_identities;
+create policy device_identities_select on public.device_identities for select to authenticated
+    using (
+        user_id = auth.uid() or 
+        exists (select 1 from public.space_members sm where sm.space_id = public.my_space() and sm.user_id = device_identities.user_id)
+    );
+
+drop policy if exists device_identities_upsert on public.device_identities;
+create policy device_identities_upsert on public.device_identities for all to authenticated
+    using (user_id = auth.uid())
+    with check (user_id = auth.uid());
+
+-- Device Prekeys RLS
+drop policy if exists device_prekeys_select on public.device_prekeys;
+create policy device_prekeys_select on public.device_prekeys for select to authenticated
+    using (
+        user_id = auth.uid() or
+        exists (select 1 from public.space_members sm where sm.space_id = public.my_space() and sm.user_id = device_prekeys.user_id)
+    );
+
+drop policy if exists device_prekeys_all on public.device_prekeys;
+create policy device_prekeys_all on public.device_prekeys for all to authenticated
+    using (user_id = auth.uid())
+    with check (user_id = auth.uid());
+
+-- Disappearing Message Policy RLS
+drop policy if exists disappearing_policy_all on public.disappearing_message_policies;
+create policy disappearing_policy_all on public.disappearing_message_policies for all to authenticated
+    using (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()))
+    with check (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+-- Encrypted Messages RLS
+drop policy if exists encrypted_messages_select on public.encrypted_messages;
+create policy encrypted_messages_select on public.encrypted_messages for select to authenticated
+    using (
+        exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space())
+        and (expires_at is null or expires_at > now())
+    );
+
+drop policy if exists encrypted_messages_insert on public.encrypted_messages;
+create policy encrypted_messages_insert on public.encrypted_messages for insert to authenticated
+    with check (
+        sender_id = auth.uid() and
+        exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space())
+    );
+
+drop policy if exists encrypted_messages_update on public.encrypted_messages;
+create policy encrypted_messages_update on public.encrypted_messages for update to authenticated
+    using (sender_id = auth.uid() and exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()))
+    with check (sender_id = auth.uid());
+
+drop policy if exists encrypted_messages_delete on public.encrypted_messages;
+create policy encrypted_messages_delete on public.encrypted_messages for delete to authenticated
+    using (sender_id = auth.uid() or recipient_id = auth.uid());
+
+-- Encrypted Attachments RLS
+drop policy if exists encrypted_attachments_select on public.encrypted_attachments;
+create policy encrypted_attachments_select on public.encrypted_attachments for select to authenticated
+    using (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+drop policy if exists encrypted_attachments_insert on public.encrypted_attachments;
+create policy encrypted_attachments_insert on public.encrypted_attachments for insert to authenticated
+    with check (
+        uploader_id = auth.uid() and
+        exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space())
+    );
+
+drop policy if exists encrypted_attachments_update on public.encrypted_attachments;
+create policy encrypted_attachments_update on public.encrypted_attachments for update to authenticated
+    using (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+drop policy if exists encrypted_attachments_delete on public.encrypted_attachments;
+create policy encrypted_attachments_delete on public.encrypted_attachments for delete to authenticated
+    using (exists (select 1 from public.conversations c where c.id = conversation_id and c.couple_space_id = public.my_space()));
+
+-- Message Receipts RLS
+drop policy if exists message_receipts_all on public.message_receipts;
+create policy message_receipts_all on public.message_receipts for all to authenticated
+    using (exists (select 1 from public.encrypted_messages em join public.conversations c on em.conversation_id = c.id where em.id = message_id and c.couple_space_id = public.my_space()))
+    with check (user_id = auth.uid());
+
+-- Security Events RLS
+drop policy if exists security_events_all on public.security_events;
+create policy security_events_all on public.security_events for all to authenticated
+    using (user_id = auth.uid())
+    with check (user_id = auth.uid());
+
+-- Upload Sessions RLS
+drop policy if exists upload_sessions_all on public.media_upload_sessions;
+create policy upload_sessions_all on public.media_upload_sessions for all to authenticated
+    using (user_id = auth.uid())
+    with check (user_id = auth.uid());
+
+-- Storage RLS for encrypted-media and encrypted-gallery
+drop policy if exists storage_encrypted_media_select on storage.objects;
+create policy storage_encrypted_media_select on storage.objects for select to authenticated
+    using (bucket_id in ('encrypted-media', 'encrypted-gallery'));
+
+drop policy if exists storage_encrypted_media_insert on storage.objects;
+create policy storage_encrypted_media_insert on storage.objects for insert to authenticated
+    with check (bucket_id in ('encrypted-media', 'encrypted-gallery') and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- Expired messages cleanup procedure
+create or replace function public.cleanup_expired_messages()
+returns integer
+language plpgsql
+security definer
+as $$
+declare
+    deleted_count integer;
+begin
+    delete from public.encrypted_messages
+    where expires_at is not null and expires_at <= now();
+    get diagnostics deleted_count = row_count;
+    return deleted_count;
+end;
+$$;
+
+-- Realtime publication additions
+alter publication supabase_realtime add table public.conversations;
+alter publication supabase_realtime add table public.encrypted_messages;
+alter publication supabase_realtime add table public.message_receipts;
+alter publication supabase_realtime add table public.disappearing_message_policies;
+
+
