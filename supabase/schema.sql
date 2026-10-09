@@ -361,3 +361,117 @@ alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.message_reactions;
 alter publication supabase_realtime add table public.avatar_interactions;
 alter publication supabase_realtime add table public.shared_memories;
+
+-- ----------------------------------------------------------------------------
+-- 11. ADVANCED 3D ROOM CREATOR DATABASE
+-- ----------------------------------------------------------------------------
+create table if not exists public.room_templates (
+    id text primary key,
+    name text not null,
+    room_type text not null,
+    description text,
+    dimensions jsonb not null default '{"width": 6, "depth": 6, "height": 3.2}'::jsonb,
+    wall_color text not null default '#FDF0ED',
+    floor_material text not null default 'hardwood_oak',
+    lighting_theme text not null default 'warm_sunset',
+    window_scenery text not null default 'city_sunset',
+    default_objects jsonb not null default '[]'::jsonb
+);
+
+create table if not exists public.furniture_catalog (
+    catalog_id text primary key,
+    name text not null,
+    category text not null,
+    icon text not null,
+    description text,
+    default_color text not null,
+    available_colors text[] not null default '{}',
+    grid_width int not null default 1,
+    grid_depth int not null default 1,
+    height numeric not null default 1.0,
+    interaction_type text
+);
+
+create table if not exists public.rooms (
+    id uuid primary key default gen_random_uuid(),
+    couple_id uuid not null references public.spaces(id) on delete cascade,
+    name text not null default 'Our Couple Sanctuary',
+    room_type text not null default 'bedroom',
+    dimensions jsonb not null default '{"width": 6, "depth": 6, "height": 3.2}'::jsonb,
+    wall_color text not null default '#FDF0ED',
+    floor_material text not null default 'hardwood_oak',
+    lighting_theme text not null default 'warm_sunset',
+    window_scenery text not null default 'city_sunset',
+    revision bigint not null default 1,
+    last_edited_by uuid references auth.users(id),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique(couple_id)
+);
+
+create table if not exists public.room_objects (
+    id text primary key,
+    room_id uuid not null references public.rooms(id) on delete cascade,
+    catalog_id text not null,
+    position jsonb not null default '{"x": 0, "y": 0, "z": 0}'::jsonb,
+    rotation_y numeric not null default 0,
+    color text not null default '#FF6B8B',
+    scale numeric not null default 1.0,
+    interaction_type text,
+    photo_url text,
+    created_at timestamptz not null default now()
+);
+
+create table if not exists public.room_customizations (
+    id uuid primary key default gen_random_uuid(),
+    room_id uuid not null references public.rooms(id) on delete cascade,
+    custom_wall_texture text,
+    custom_floor_texture text,
+    ambient_audio_url text,
+    updated_at timestamptz not null default now()
+);
+
+create table if not exists public.room_edit_history (
+    id bigint generated always as identity primary key,
+    room_id uuid not null references public.rooms(id) on delete cascade,
+    editor_id uuid not null references auth.users(id),
+    revision bigint not null,
+    snapshot_objects jsonb not null,
+    action_type text not null,
+    created_at timestamptz not null default now()
+);
+
+create table if not exists public.room_permissions (
+    room_id uuid not null references public.rooms(id) on delete cascade,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    can_edit boolean not null default true,
+    primary key(room_id, user_id)
+);
+
+alter table public.rooms enable row level security;
+alter table public.room_objects enable row level security;
+alter table public.room_customizations enable row level security;
+alter table public.room_edit_history enable row level security;
+alter table public.room_permissions enable row level security;
+
+drop policy if exists rooms_select on public.rooms;
+create policy rooms_select on public.rooms for select to authenticated 
+    using (couple_id = public.my_space());
+
+drop policy if exists rooms_all on public.rooms;
+create policy rooms_all on public.rooms for all to authenticated 
+    using (couple_id = public.my_space())
+    with check (couple_id = public.my_space());
+
+drop policy if exists room_objects_all on public.room_objects;
+create policy room_objects_all on public.room_objects for all to authenticated 
+    using (exists (select 1 from public.rooms r where r.id = room_id and r.couple_id = public.my_space()))
+    with check (exists (select 1 from public.rooms r where r.id = room_id and r.couple_id = public.my_space()));
+
+drop policy if exists history_select on public.room_edit_history;
+create policy history_select on public.room_edit_history for select to authenticated 
+    using (exists (select 1 from public.rooms r where r.id = room_id and r.couple_id = public.my_space()));
+
+alter publication supabase_realtime add table public.rooms;
+alter publication supabase_realtime add table public.room_objects;
+

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { Colors, Radii, Spacing, Shadows } from '../../constants/theme';
 import { CoupleAvatarScene } from '../../components/world/CoupleAvatarScene';
+import { RoomCreator3D } from '../../components/world/RoomCreator3D';
 import { FloatingHearts } from '../../components/ui/FloatingHearts';
 import { AvatarCustomizer } from '../../components/avatars/AvatarCustomizer';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useAuthStore } from '../../stores/authStore';
 import { useCoupleStore } from '../../stores/coupleStore';
 import { useWorldStore } from '../../stores/worldStore';
+import { useRoomStore } from '../../stores/roomStore';
 import { CoupleInteraction, FacialExpression } from '../../types';
 
 const ROMANTIC_ACTIONS: { type: CoupleInteraction; label: string; icon: string; expr: FacialExpression }[] = [
@@ -51,12 +53,18 @@ export default function WorldScreen() {
   } = useWorldStore();
 
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
+  const { loadRoom, subscribeToRoom, unsubscribeFromRoom } = useRoomStore();
 
   useEffect(() => {
     if (couple?.id && profile?.id) {
       subscribeToWorld(couple.id, profile.id);
+      loadRoom(couple.id);
+      subscribeToRoom(couple.id, profile.id);
     }
-    return () => unsubscribeFromWorld();
+    return () => {
+      unsubscribeFromWorld();
+      unsubscribeFromRoom();
+    };
   }, [couple?.id, profile?.id]);
 
   const handleInteraction = async (type: CoupleInteraction, expr: FacialExpression) => {
@@ -83,15 +91,9 @@ export default function WorldScreen() {
           <Badge label={partner ? 'Connected ❤️' : 'Solo Space'} variant={partner ? 'primary' : 'lavender'} />
         </View>
 
-        {/* 3D Bitmoji Couple Room Experience */}
+        {/* Advanced 3D Virtual Room Creator & Avatar Engine */}
         <Card style={styles.canvasCard}>
-          <CoupleAvatarScene
-            myConfig={profile?.avatarConfig}
-            partnerConfig={partner?.avatarConfig}
-            interaction={currentInteraction}
-            myExpression={myExpression}
-            partnerExpression={partnerExpression}
-          />
+          <RoomCreator3D />
         </Card>
 
         {/* 10 Coordinated Couple Interactions Grid */}
