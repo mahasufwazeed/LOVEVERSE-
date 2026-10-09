@@ -87,20 +87,22 @@ export function CoupleAvatarScene({
     camera.position.set(0, 3.6, 6.2);
     camera.lookAt(0, 0.9, -0.2);
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas: {
-        width: gl.drawingBufferWidth,
-        height: gl.drawingBufferHeight,
-        style: {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        clientHeight: gl.drawingBufferHeight,
-        clientWidth: gl.drawingBufferWidth,
-        getContext: () => gl,
-      } as any,
-      context: gl as any,
-      antialias: true,
-    });
+    const renderer = (gl as any).canvas
+      ? new THREE.WebGLRenderer({ canvas: (gl as any).canvas, antialias: true, alpha: true })
+      : new THREE.WebGLRenderer({
+          canvas: {
+            width: gl.drawingBufferWidth,
+            height: gl.drawingBufferHeight,
+            style: {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            clientHeight: gl.drawingBufferHeight,
+            clientWidth: gl.drawingBufferWidth,
+            getContext: () => gl,
+          } as any,
+          context: gl as any,
+          antialias: true,
+        });
     renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     // 1. Lighting Setup
@@ -274,7 +276,9 @@ export function CoupleAvatarScene({
       }
 
       renderer.render(scene, camera);
-      gl.endFrameEXP();
+      if (typeof (gl as any).endFrameEXP === 'function') {
+        (gl as any).endFrameEXP();
+      }
     };
 
     render();

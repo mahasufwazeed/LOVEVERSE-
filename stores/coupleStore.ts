@@ -12,6 +12,7 @@ interface CoupleState {
   createSpace: () => Promise<{ code?: string; error?: string }>;
   joinSpace: (code: string) => Promise<{ error?: string }>;
   disconnect: () => Promise<{ error?: string }>;
+  setDemoCouple: () => void;
 }
 
 export const useCoupleStore = create<CoupleState>((set, get) => ({
@@ -21,7 +22,42 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
   isLoading: false,
   error: null,
 
+  setDemoCouple: () => {
+    const demoPartner: UserProfile = {
+      id: 'demo-partner-456',
+      displayName: 'Darling 💕',
+      avatarConfig: {
+        skinColor: '#F5C6A5',
+        hairStyle: 'short',
+        hairColor: '#1E1E24',
+        eyeColor: '#2B2D42',
+        shirtColor: '#6C4AB6',
+        pantsColor: '#3D348B',
+        accessory: 'none',
+        expression: 'loving',
+      },
+      coupleId: 'demo-couple-456',
+    };
+
+    set({
+      couple: {
+        id: 'demo-couple-456',
+        inviteCode: 'LOVE99',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      },
+      partner: demoPartner,
+      inviteCode: 'LOVE99',
+      isLoading: false,
+      error: null,
+    });
+  },
+
   loadCouple: async (userId: string) => {
+    if (userId === 'demo-user-123') {
+      get().setDemoCouple();
+      return;
+    }
     if (!isSupabaseConfigured || !userId) return;
     try {
       set({ isLoading: true, error: null });

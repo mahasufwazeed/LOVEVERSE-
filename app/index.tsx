@@ -61,47 +61,55 @@ export default function Index() {
 
   // If authenticated & paired, render the full tabbed LoveVerse experience
   return (
-    <View style={styles.mainContainer}>
-      {/* Content Area */}
-      <View style={styles.contentArea}>
-        {activeTab === 'world' && <WorldScreen />}
-        {activeTab === 'chat' && <ChatScreen />}
-        {activeTab === 'games' && <GamesScreen />}
-        {activeTab === 'watch' && <WatchScreen />}
-        {activeTab === 'us' && <UsScreen />}
-      </View>
+    <View style={styles.webWrapper}>
+      <View style={styles.mainContainer}>
+        {/* Content Area */}
+        <View style={styles.contentArea}>
+          {activeTab === 'world' && <WorldScreen />}
+          {activeTab === 'chat' && <ChatScreen />}
+          {activeTab === 'games' && <GamesScreen />}
+          {activeTab === 'watch' && <WatchScreen />}
+          {activeTab === 'us' && <UsScreen />}
+        </View>
 
-      {/* Romantic Bottom Tab Navigation Bar */}
-      <View style={styles.tabBar}>
-        {[
-          { key: 'world', title: 'Our World', icon: '🏡' },
-          { key: 'chat', title: 'Chat', icon: '💌' },
-          { key: 'games', title: 'Games', icon: '🎮' },
-          { key: 'watch', title: 'Watch', icon: '🍿' },
-          { key: 'us', title: 'Us', icon: '💕' },
-        ].map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key as any)}
-              style={styles.tabBtn}
-            >
-              <Text style={[styles.tabIcon, isActive && styles.tabIconActive]}>
-                {tab.icon}
-              </Text>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                {tab.title}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {/* Romantic Bottom Tab Navigation Bar */}
+        <View style={styles.tabBar}>
+          {[
+            { key: 'world', title: 'Our World', icon: '🏡' },
+            { key: 'chat', title: 'Chat', icon: '💌' },
+            { key: 'games', title: 'Games', icon: '🎮' },
+            { key: 'watch', title: 'Watch', icon: '🍿' },
+            { key: 'us', title: 'Us', icon: '💕' },
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key as any)}
+                style={styles.tabBtn}
+              >
+                <Text style={[styles.tabIcon, isActive && styles.tabIconActive]}>
+                  {tab.icon}
+                </Text>
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                  {tab.title}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  webWrapper: {
+    flex: 1,
+    backgroundColor: '#FAF5FF',
+    width: '100%',
+    alignItems: 'center',
+  },
   loadingContainer: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -125,6 +133,8 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: Colors.background,
+    width: '100%',
+    maxWidth: 520,
   },
   contentArea: {
     flex: 1,

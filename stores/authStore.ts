@@ -12,6 +12,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error?: string }>;
+  loginAsDemo: () => void;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updateAvatarConfig: (config: AvatarConfig) => Promise<void>;
@@ -159,6 +160,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ isLoading: false });
     return {};
+  },
+
+  loginAsDemo: () => {
+    const demoUser = {
+      id: 'demo-user-123',
+      email: 'sweetheart@loveverse.app',
+      user_metadata: { display_name: 'Sweetheart' },
+      app_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+    } as any;
+
+    const demoProfile: UserProfile = {
+      id: 'demo-user-123',
+      displayName: 'Sweetheart',
+      avatarConfig: {
+        skinColor: '#FDDFB2',
+        hairStyle: 'wavy',
+        hairColor: '#4A2B11',
+        eyeColor: '#3E2723',
+        shirtColor: '#FF5C8A',
+        pantsColor: '#292238',
+        accessory: 'glasses',
+        expression: 'happy',
+      },
+      coupleId: 'demo-couple-456',
+    };
+
+    set({
+      session: { user: demoUser } as any,
+      user: demoUser,
+      profile: demoProfile,
+      isLoading: false,
+      error: null,
+    });
   },
 
   signOut: async () => {

@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, isLoading } = useAuthStore();
+  const { signIn, loginAsDemo, isLoading } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +65,13 @@ export default function LoginScreen() {
           style={{ marginTop: Spacing.md }}
         />
 
+        <Button
+          title="✨ Explore Demo Space (Instant Access)"
+          variant="secondary"
+          onPress={() => loginAsDemo()}
+          style={{ marginTop: Spacing.sm }}
+        />
+
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>New to LoveVerse? </Text>
           <Pressable onPress={() => router.push('/(auth)/register')}>
@@ -84,6 +91,9 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.lg,
     paddingTop: 80,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     alignItems: 'center',

@@ -19,7 +19,7 @@ import { useRouter } from 'expo-router';
 export default function PairingScreen() {
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
-  const { couple, inviteCode, createSpace, joinSpace, isLoading } = useCoupleStore();
+  const { couple, inviteCode, createSpace, joinSpace, setDemoCouple, isLoading } = useCoupleStore();
 
   const [inputCode, setInputCode] = useState('');
 
@@ -132,9 +132,19 @@ export default function PairingScreen() {
       )}
 
       <Button
+        title="✨ Demo: Auto-Pair with Virtual Darling 💕"
+        variant="secondary"
+        style={{ marginTop: Spacing.md }}
+        onPress={() => {
+          setDemoCouple();
+          router.replace('/(tabs)/world');
+        }}
+      />
+
+      <Button
         title="Sign Out"
         variant="ghost"
-        style={{ marginTop: Spacing.md }}
+        style={{ marginTop: Spacing.sm }}
         onPress={signOut}
       />
     </ScrollView>
@@ -149,6 +159,9 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.lg,
     paddingTop: 60,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     alignItems: 'center',
