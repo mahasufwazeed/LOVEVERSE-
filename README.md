@@ -56,6 +56,7 @@
    ```
 
 Unreal setup details are documented in [`UNREAL_ENGINE_INTEGRATION.md`](UNREAL_ENGINE_INTEGRATION.md).
+The Unreal Engine project scaffold lives in [`unreal/`](unreal/).
 
 ### 3. Run Automated Tests
 ```bash
