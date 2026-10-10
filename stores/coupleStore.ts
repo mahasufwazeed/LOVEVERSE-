@@ -1,14 +1,56 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { Couple, UserProfile } from '../types';
+import { Couple, UserProfile, PartnerRequest, PublicPartnerProfile } from '../types';
+import {
+  PartnerConnectionService,
+  RealtimePartnerEventData,
+} from '../services/PartnerConnectionService';
 
 interface CoupleState {
   couple: Couple | null;
   partner: UserProfile | null;
   inviteCode: string | null;
+  publicCoupleId: string | null;
+  incomingRequests: PartnerRequest[];
+  outgoingRequests: PartnerRequest[];
+  foundPartner: PublicPartnerProfile | null;
+  isSearching: boolean;
   isLoading: boolean;
   error: string | null;
+
+  // Pairing & Requests
   loadCouple: (userId: string) => Promise<void>;
+  searchPartner: (
+    loveverseId: string,
+    currentUserId: string
+  ) => Promise<{ partner?: PublicPartnerProfile; error?: string }>;
+  clearFoundPartner: () => void;
+  sendPartnerRequest: (
+    senderUserId: string,
+    receiverLoveverseId: string
+  ) => Promise<{ request?: PartnerRequest; error?: string }>;
+  acceptPartnerRequest: (
+    receiverUserId: string,
+    requestId: string
+  ) => Promise<{ coupleId?: string; publicCoupleId?: string; error?: string }>;
+  rejectPartnerRequest: (
+    receiverUserId: string,
+    requestId: string
+  ) => Promise<{ error?: string }>;
+  cancelPartnerRequest: (
+    senderUserId: string,
+    requestId: string
+  ) => Promise<{ error?: string }>;
+  fetchRequests: (userId: string) => Promise<void>;
+  subscribeToRequests: (userId: string) => () => void;
+  blockUser: (currentUserId: string, targetUserId: string) => Promise<{ error?: string }>;
+  reportUser: (
+    currentUserId: string,
+    targetUserId: string,
+    reason: string
+  ) => Promise<{ error?: string }>;
+
+  // Legacy & Utility
   createSpace: () => Promise<{ code?: string; error?: string }>;
   joinSpace: (code: string) => Promise<{ error?: string }>;
   disconnect: () => Promise<{ error?: string }>;
@@ -19,21 +61,28 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
   couple: null,
   partner: null,
   inviteCode: null,
+  publicCoupleId: null,
+  incomingRequests: [],
+  outgoingRequests: [],
+  foundPartner: null,
+  isSearching: false,
   isLoading: false,
   error: null,
 
   setDemoCouple: () => {
     const demoPartner: UserProfile = {
-      id: 'demo-partner-456',
-      displayName: 'Darling 💕',
+      id: 'demo-user-emma',
+      displayName: 'Emma 💕',
+      profileLabel: 'her',
+      publicLoveverseId: 'LV-M4R81X92PL',
       avatarConfig: {
-        skinColor: '#F5C6A5',
-        hairStyle: 'short',
-        hairColor: '#1E1E24',
-        eyeColor: '#2B2D42',
-        shirtColor: '#6C4AB6',
-        pantsColor: '#3D348B',
-        accessory: 'none',
+        skinColor: '#FDDFB2',
+        hairStyle: 'wavy',
+        hairColor: '#D35400',
+        eyeColor: '#27AE60',
+        shirtColor: '#FF5C8A',
+        pantsColor: '#8E44AD',
+        accessory: 'flower',
         expression: 'loving',
       },
       coupleId: 'demo-couple-456',
@@ -42,12 +91,15 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
     set({
       couple: {
         id: 'demo-couple-456',
+        publicCoupleId: 'CP-9TX42RK8M2',
         inviteCode: 'LOVE99',
         status: 'active',
         createdAt: new Date().toISOString(),
+        partner: demoPartner,
       },
       partner: demoPartner,
       inviteCode: 'LOVE99',
+      publicCoupleId: 'CP-9TX42RK8M2',
       isLoading: false,
       error: null,
     });
@@ -70,7 +122,7 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
         .maybeSingle();
 
       if (memberErr || !member) {
-        // Check old table fallback if migration in progress
+        // Fallback for legacy members table
         const { data: legacyMember } = await supabase
           .from('members')
           .select('space_id')
@@ -78,16 +130,24 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
           .maybeSingle();
 
         if (legacyMember) {
+          const { data: spaceData } = await supabase
+            .from('spaces')
+            .select('*')
+            .eq('id', legacyMember.space_id)
+            .maybeSingle();
+
           set({
             couple: {
               id: legacyMember.space_id,
-              inviteCode: '',
+              publicCoupleId: spaceData?.public_couple_id,
+              inviteCode: spaceData?.invite_code || '',
               status: 'active',
-              createdAt: new Date().toISOString(),
+              createdAt: spaceData?.created_at || new Date().toISOString(),
             },
+            publicCoupleId: spaceData?.public_couple_id || null,
           });
         } else {
-          set({ couple: null, partner: null });
+          set({ couple: null, partner: null, publicCoupleId: null });
         }
         set({ isLoading: false });
         return;
@@ -97,10 +157,10 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
 
       // Fetch couple record
       const { data: coupleData } = await supabase
-        .from('couples')
+        .from('spaces')
         .select('*')
         .eq('id', coupleId)
-        .single();
+        .maybeSingle();
 
       // Find partner ID
       const { data: partnerMember } = await supabase
@@ -122,6 +182,8 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
           partnerProfile = {
             id: pData.id,
             displayName: pData.display_name,
+            profileLabel: pData.profile_label || 'partner',
+            publicLoveverseId: pData.public_loveverse_id,
             avatarConfig: pData.avatar_config,
             avatarUrl: pData.avatar_url,
           };
@@ -132,9 +194,10 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
         couple: coupleData
           ? {
               id: coupleData.id,
+              publicCoupleId: coupleData.public_couple_id,
               inviteCode: coupleData.invite_code,
               anniversaryDate: coupleData.anniversary_date,
-              status: coupleData.status,
+              status: 'active',
               createdAt: coupleData.created_at,
               partner: partnerProfile,
             }
@@ -147,6 +210,7 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
             },
         partner: partnerProfile,
         inviteCode: coupleData?.invite_code || null,
+        publicCoupleId: coupleData?.public_couple_id || null,
         isLoading: false,
       });
     } catch (e: any) {
@@ -154,10 +218,153 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
     }
   },
 
+  searchPartner: async (loveverseId: string, currentUserId: string) => {
+    set({ isSearching: true, error: null, foundPartner: null });
+    const res = await PartnerConnectionService.searchPartner(currentUserId, loveverseId);
+    set({
+      isSearching: false,
+      foundPartner: res.partner || null,
+      error: res.error || null,
+    });
+    return res;
+  },
+
+  clearFoundPartner: () => {
+    set({ foundPartner: null, error: null });
+  },
+
+  sendPartnerRequest: async (senderUserId: string, receiverLoveverseId: string) => {
+    set({ isLoading: true, error: null });
+    const res = await PartnerConnectionService.sendPartnerRequest(
+      senderUserId,
+      receiverLoveverseId
+    );
+    if (res.error) {
+      set({ isLoading: false, error: res.error });
+      return res;
+    }
+
+    if (res.request) {
+      const current = get().outgoingRequests;
+      set({
+        outgoingRequests: [res.request, ...current],
+        isLoading: false,
+        foundPartner: null,
+      });
+    } else {
+      set({ isLoading: false });
+    }
+    return res;
+  },
+
+  acceptPartnerRequest: async (receiverUserId: string, requestId: string) => {
+    set({ isLoading: true, error: null });
+    const res = await PartnerConnectionService.acceptPartnerRequest(
+      receiverUserId,
+      requestId
+    );
+
+    if (res.error) {
+      set({ isLoading: false, error: res.error });
+      return res;
+    }
+
+    // Refresh couple & requests
+    await get().loadCouple(receiverUserId);
+    await get().fetchRequests(receiverUserId);
+
+    if (res.coupleId && res.publicCoupleId) {
+      set({
+        publicCoupleId: res.publicCoupleId,
+        inviteCode: res.inviteCode || null,
+        isLoading: false,
+      });
+    } else {
+      set({ isLoading: false });
+    }
+
+    return res;
+  },
+
+  rejectPartnerRequest: async (receiverUserId: string, requestId: string) => {
+    set({ isLoading: true, error: null });
+    const res = await PartnerConnectionService.rejectPartnerRequest(
+      receiverUserId,
+      requestId
+    );
+    if (!res.error) {
+      const filtered = get().incomingRequests.filter((r) => r.id !== requestId);
+      set({ incomingRequests: filtered, isLoading: false });
+    } else {
+      set({ isLoading: false, error: res.error });
+    }
+    return res;
+  },
+
+  cancelPartnerRequest: async (senderUserId: string, requestId: string) => {
+    set({ isLoading: true, error: null });
+    const res = await PartnerConnectionService.cancelPartnerRequest(
+      senderUserId,
+      requestId
+    );
+    if (!res.error) {
+      const filtered = get().outgoingRequests.filter((r) => r.id !== requestId);
+      set({ outgoingRequests: filtered, isLoading: false });
+    } else {
+      set({ isLoading: false, error: res.error });
+    }
+    return res;
+  },
+
+  fetchRequests: async (userId: string) => {
+    if (!userId) return;
+    const [inc, out] = await Promise.all([
+      PartnerConnectionService.getIncomingRequests(userId),
+      PartnerConnectionService.getOutgoingRequests(userId),
+    ]);
+
+    set({
+      incomingRequests: inc.requests || [],
+      outgoingRequests: out.requests || [],
+    });
+  },
+
+  subscribeToRequests: (userId: string) => {
+    if (!userId) return () => {};
+
+    // Initial fetch
+    get().fetchRequests(userId);
+
+    // Subscribe to realtime updates
+    const unsubscribe = PartnerConnectionService.subscribeToEvents(
+      userId,
+      async (event: RealtimePartnerEventData) => {
+        // Refresh requests and couple state whenever an event occurs
+        await get().fetchRequests(userId);
+        if (event.type === 'request_accepted' || event.type === 'partner_connected') {
+          await get().loadCouple(userId);
+        }
+      }
+    );
+
+    return unsubscribe;
+  },
+
+  blockUser: async (currentUserId: string, targetUserId: string) => {
+    const res = await PartnerConnectionService.blockUser(currentUserId, targetUserId);
+    if (!res.error) {
+      await get().fetchRequests(currentUserId);
+    }
+    return res;
+  },
+
+  reportUser: async (currentUserId: string, targetUserId: string, reason: string) => {
+    return PartnerConnectionService.reportUser(currentUserId, targetUserId, reason);
+  },
+
   createSpace: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Call create_space RPC
       const { data, error } = await supabase.rpc('create_space');
       if (error) {
         set({ error: error.message, isLoading: false });
@@ -217,14 +424,22 @@ export const useCoupleStore = create<CoupleState>((set, get) => ({
     try {
       const coupleId = get().couple?.id;
       if (coupleId) {
-        // Disconnect member
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from('couple_members').delete().eq('user_id', user.id);
           await supabase.from('members').delete().eq('user_id', user.id);
         }
       }
-      set({ couple: null, partner: null, inviteCode: null, isLoading: false });
+      set({
+        couple: null,
+        partner: null,
+        inviteCode: null,
+        publicCoupleId: null,
+        incomingRequests: [],
+        outgoingRequests: [],
+        foundPartner: null,
+        isLoading: false,
+      });
       return {};
     } catch (e: any) {
       set({ error: e.message, isLoading: false });

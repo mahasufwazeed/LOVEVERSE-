@@ -68,6 +68,36 @@ export interface AvatarConfig {
   expression?: FacialExpression;
 }
 
+export type ProfileLabel = 'him' | 'her' | 'partner';
+
+export type PartnerRequestStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired';
+
+export interface PublicPartnerProfile {
+  id: string;
+  publicLoveverseId: string;
+  displayName: string;
+  profileLabel: ProfileLabel;
+  avatarConfig: AvatarConfig;
+  avatarUrl?: string;
+}
+
+export interface PartnerRequest {
+  id: string;
+  senderUserId: string;
+  receiverUserId: string;
+  status: PartnerRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  sender?: PublicPartnerProfile;
+  receiver?: PublicPartnerProfile;
+}
+
 export interface UserProfile {
   id: string;
   email?: string;
@@ -76,16 +106,21 @@ export interface UserProfile {
   avatarUrl?: string;
   anniversaryDate?: string;
   coupleId?: string | null;
+  publicLoveverseId?: string;
+  profileLabel?: ProfileLabel;
   createdAt?: string;
 }
 
 export interface Couple {
   id: string;
+  publicCoupleId?: string;
   inviteCode: string;
   anniversaryDate?: string;
   status: 'active' | 'disconnected';
   createdAt: string;
   partner?: UserProfile | null;
+  partnerAUserId?: string;
+  partnerBUserId?: string;
 }
 
 export interface MessageReaction {

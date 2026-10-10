@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { UserProfile, AvatarConfig } from '../types';
+import { UserProfile, AvatarConfig, ProfileLabel } from '../types';
 import type { Session, User } from '@supabase/supabase-js';
+import { generateLoveverseId, mockPartnerStore } from '../services/PartnerConnectionService';
 
 interface AuthState {
   session: Session | null;
@@ -11,7 +12,12 @@ interface AuthState {
   error: string | null;
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{
+  signUp: (
+    email: string,
+    password: string,
+    displayName?: string,
+    profileLabel?: ProfileLabel
+  ) => Promise<{
     error?: string;
     requiresEmailConfirmation?: boolean;
   }>;
@@ -19,6 +25,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updateAvatarConfig: (config: AvatarConfig) => Promise<void>;
+  setProfileLabel: (label: ProfileLabel) => Promise<void>;
 }
 
 const defaultAvatarConfig: AvatarConfig = {
@@ -62,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .maybeSingle();
 
         if (profile) {
+          const userLoveverseId = profile.public_loveverse_id || generateLoveverseId();
           set({
             profile: {
               id: profile.id,
@@ -70,14 +78,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               avatarUrl: profile.avatar_url,
               anniversaryDate: profile.anniversary_date,
               coupleId: profile.couple_id,
+              publicLoveverseId: userLoveverseId,
+              profileLabel: (profile.profile_label as ProfileLabel) || 'partner',
             },
           });
         } else {
           // Default profile
+          const userLoveverseId = generateLoveverseId();
           const newProfile: UserProfile = {
             id: session.user.id,
             displayName: session.user.email?.split('@')[0] || 'Sweetheart',
             avatarConfig: defaultAvatarConfig,
+            publicLoveverseId: userLoveverseId,
+            profileLabel: 'partner',
           };
           set({ profile: newProfile });
         }
@@ -102,6 +115,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 avatarConfig: data.avatar_config || defaultAvatarConfig,
                 anniversaryDate: data.anniversary_date,
                 coupleId: data.couple_id,
+                publicLoveverseId: data.public_loveverse_id || generateLoveverseId(),
+                profileLabel: (data.profile_label as ProfileLabel) || 'partner',
               },
             });
           }
@@ -127,7 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return {};
   },
 
-  signUp: async (email, password, displayName) => {
+  signUp: async (email, password, displayName, profileLabel = 'partner') => {
     set({ isLoading: true, error: null });
     if (!isSupabaseConfigured) {
       const message =
@@ -137,11 +152,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     const name = displayName?.trim() || email.split('@')[0] || 'Sweetheart';
+    const newLoveverseId = generateLoveverseId();
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: name },
+        data: {
+          display_name: name,
+          profile_label: profileLabel,
+          public_loveverse_id: newLoveverseId,
+        },
       },
     });
 
@@ -151,13 +172,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (data.user) {
-      // The database trigger creates this profile after Auth registration. An unconfirmed
-      // email has no session, so only attempt the client upsert when it is authorized.
       if (data.session) {
         const { error: profileError } = await supabase.from('profiles').upsert({
           id: data.user.id,
           display_name: name,
           avatar_config: defaultAvatarConfig,
+          public_loveverse_id: newLoveverseId,
+          profile_label: profileLabel,
         });
         if (profileError) {
           const message = `Account created, but profile setup failed: ${profileError.message}`;
@@ -172,6 +193,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           id: data.user.id,
           displayName: name,
           avatarConfig: defaultAvatarConfig,
+          publicLoveverseId: newLoveverseId,
+          profileLabel,
         },
       });
     }
@@ -184,7 +207,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const demoUser = {
       id: 'demo-user-123',
       email: 'sweetheart@loveverse.app',
-      user_metadata: { display_name: 'Sweetheart' },
+      user_metadata: { display_name: 'Alex', profile_label: 'him' },
       app_metadata: {},
       aud: 'authenticated',
       created_at: new Date().toISOString(),
@@ -192,19 +215,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const demoProfile: UserProfile = {
       id: 'demo-user-123',
-      displayName: 'Sweetheart',
+      displayName: 'Alex',
       avatarConfig: {
         skinColor: '#FDDFB2',
-        hairStyle: 'wavy',
+        hairStyle: 'short',
         hairColor: '#4A2B11',
         eyeColor: '#3E2723',
-        shirtColor: '#FF5C8A',
-        pantsColor: '#292238',
+        shirtColor: '#4A90E2',
+        pantsColor: '#2C3E50',
         accessory: 'glasses',
         expression: 'happy',
       },
       coupleId: 'demo-couple-456',
+      publicLoveverseId: 'LV-A7K92MP4TX',
+      profileLabel: 'him',
     };
+
+    mockPartnerStore.registerUser({
+      id: 'demo-user-123',
+      publicLoveverseId: 'LV-A7K92MP4TX',
+      displayName: 'Alex',
+      profileLabel: 'him',
+      avatarConfig: demoProfile.avatarConfig,
+      coupleId: 'demo-couple-456',
+    });
 
     set({
       session: { user: demoUser } as any,
@@ -232,6 +266,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         display_name: updated.displayName,
         anniversary_date: updated.anniversaryDate,
         avatar_config: updated.avatarConfig,
+        public_loveverse_id: updated.publicLoveverseId,
+        profile_label: updated.profileLabel,
       });
     }
   },
@@ -246,6 +282,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await supabase.from('profiles').update({
         avatar_config: config,
       }).eq('id', current.id);
+    }
+  },
+
+  setProfileLabel: async (label: ProfileLabel) => {
+    const current = get().profile;
+    if (!current) return;
+    const updated = { ...current, profileLabel: label };
+    set({ profile: updated });
+
+    if (isSupabaseConfigured) {
+      await supabase
+        .from('profiles')
+        .update({ profile_label: label })
+        .eq('id', current.id);
+    }
+
+    const mock = mockPartnerStore.users.get(current.id);
+    if (mock) {
+      mock.profileLabel = label;
     }
   },
 }));

@@ -35,3 +35,12 @@ unreal/*.sln
 unreal/*.vcxproj
 unreal/*.opensdf
 unreal/*.sdf
+loveverse/Binaries/
+loveverse/DerivedDataCache/
+loveverse/Intermediate/
+loveverse/Saved/
+loveverse/.vs/
+loveverse/*.sln
+loveverse/*.vcxproj
+loveverse/*.opensdf
+loveverse/*.sdf
