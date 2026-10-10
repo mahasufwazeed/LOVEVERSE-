@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'expo-router';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -36,8 +37,10 @@ export default function RegisterScreen() {
       Alert.alert('Registration Failed', res.error);
     } else {
       Alert.alert(
-        'Welcome to LoveVerse! ✨',
-        'Account created successfully. Connect with your partner to start your journey.'
+        res.requiresEmailConfirmation ? 'Check your email ✉️' : 'Welcome to LoveVerse! ✨',
+        res.requiresEmailConfirmation
+          ? 'Your account was created. Confirm your email address, then sign in to continue.'
+          : 'Account created successfully. Connect with your partner to start your journey.'
       );
     }
   };
@@ -51,6 +54,15 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.form}>
+        {!isSupabaseConfigured ? (
+          <View style={styles.configurationNotice}>
+            <Text style={styles.configurationTitle}>Account service is not configured</Text>
+            <Text style={styles.configurationCopy}>
+              Add this app’s real Supabase URL and publishable key to .env, then restart Expo.
+            </Text>
+          </View>
+        ) : null}
+
         <Input
           label="Your Nickname"
           placeholder="e.g. My Love, Honey, Leo"
@@ -78,6 +90,7 @@ export default function RegisterScreen() {
         <Button
           title="Create Account ✨"
           loading={isLoading}
+          disabled={!isSupabaseConfigured}
           onPress={handleSignUp}
           style={{ marginTop: Spacing.md }}
         />
@@ -124,6 +137,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
     borderRadius: Radii.xl,
+  },
+  configurationNotice: {
+    backgroundColor: '#FFF4E5',
+    borderColor: '#F59E0B',
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+  },
+  configurationTitle: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  configurationCopy: {
+    color: '#92400E',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
   },
   footerRow: {
     flexDirection: 'row',

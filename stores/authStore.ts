@@ -11,7 +11,10 @@ interface AuthState {
   error: string | null;
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<{
+    error?: string;
+    requiresEmailConfirmation?: boolean;
+  }>;
   loginAsDemo: () => void;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -126,6 +129,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signUp: async (email, password, displayName) => {
     set({ isLoading: true, error: null });
+    if (!isSupabaseConfigured) {
+      const message =
+        'Account creation is not configured. Replace the Supabase placeholder URL and publishable key in .env, then restart the Expo server.';
+      set({ isLoading: false, error: message });
+      return { error: message };
+    }
+
     const name = displayName?.trim() || email.split('@')[0] || 'Sweetheart';
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -141,12 +151,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (data.user) {
-      // Upsert profile
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        display_name: name,
-        avatar_config: defaultAvatarConfig,
-      });
+      // The database trigger creates this profile after Auth registration. An unconfirmed
+      // email has no session, so only attempt the client upsert when it is authorized.
+      if (data.session) {
+        const { error: profileError } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          display_name: name,
+          avatar_config: defaultAvatarConfig,
+        });
+        if (profileError) {
+          const message = `Account created, but profile setup failed: ${profileError.message}`;
+          set({ isLoading: false, error: message });
+          return { error: message };
+        }
+      }
       set({
         session: data.session,
         user: data.user,
@@ -159,7 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     set({ isLoading: false });
-    return {};
+    return { requiresEmailConfirmation: Boolean(data.user && !data.session) };
   },
 
   loginAsDemo: () => {
