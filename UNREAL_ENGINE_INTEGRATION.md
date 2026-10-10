@@ -53,3 +53,4 @@ Render static hosting is suitable for the Expo web build, but Unreal Pixel Strea
 - `lib/unreal.ts` builds the Unreal session URL.
 - `components/world/UnrealRenderLauncher.tsx` shows the Unreal 3D Render card.
 - `app/(tabs)/world.tsx` mounts the Unreal launcher in the World tab.
+- `unreal/` contains the Unreal Engine 5 project scaffold for the real 3D room, avatars, interaction director, and Pixel Streaming bridge.
