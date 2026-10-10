@@ -98,12 +98,12 @@ export class FacialExpressionController {
     const { mouth, eyebrows, cheeks, eyes, head } = this.parts;
     const blushMat = cheeks.left.material as THREE.MeshBasicMaterial;
 
-    // Reset baseline transforms
+    // Reset baseline transforms (relative to headGroup)
     mouth.scale.set(1, 1, 1);
     mouth.rotation.set(Math.PI, 0, 0);
-    mouth.position.set(0, 1.26, 0.3);
-    eyebrows.left.position.y = 1.49;
-    eyebrows.right.position.y = 1.49;
+    mouth.position.set(0, -0.12, 0.3);
+    eyebrows.left.position.y = 0.11;
+    eyebrows.right.position.y = 0.11;
     eyebrows.left.rotation.z = 0.08;
     eyebrows.right.rotation.z = -0.08;
     eyes.left.scale.set(1, 1, 1);
@@ -119,7 +119,7 @@ export class FacialExpressionController {
 
       case 'sad':
         mouth.rotation.x = 0; // Inverted frown arch
-        mouth.position.y = 1.25;
+        mouth.position.y = -0.13;
         eyebrows.left.rotation.z = -0.22;
         eyebrows.right.rotation.z = 0.22;
         blushMat.opacity = 0.2;
@@ -128,8 +128,8 @@ export class FacialExpressionController {
       case 'blushing':
         mouth.rotation.x = Math.PI;
         mouth.scale.set(0.95, 0.85, 1);
-        eyebrows.left.position.y = 1.51;
-        eyebrows.right.position.y = 1.51;
+        eyebrows.left.position.y = 0.13;
+        eyebrows.right.position.y = 0.13;
         blushMat.opacity = 0.95;
         head.rotation.z = 0.08;
         break;
@@ -137,8 +137,8 @@ export class FacialExpressionController {
       case 'excited':
         mouth.rotation.x = Math.PI;
         mouth.scale.set(1.4, 1.3, 1);
-        eyebrows.left.position.y = 1.54;
-        eyebrows.right.position.y = 1.54;
+        eyebrows.left.position.y = 0.16;
+        eyebrows.right.position.y = 0.16;
         eyes.left.scale.set(1.15, 1.15, 1);
         eyes.right.scale.set(1.15, 1.15, 1);
         blushMat.opacity = 0.8;
@@ -147,8 +147,8 @@ export class FacialExpressionController {
       case 'laughing':
         mouth.rotation.x = Math.PI;
         mouth.scale.set(1.5, 1.6, 1.2);
-        eyebrows.left.position.y = 1.53;
-        eyebrows.right.position.y = 1.53;
+        eyebrows.left.position.y = 0.15;
+        eyebrows.right.position.y = 0.15;
         eyes.left.scale.set(1.2, 0.45, 1);
         eyes.right.scale.set(1.2, 0.45, 1);
         blushMat.opacity = 0.75;
@@ -158,8 +158,8 @@ export class FacialExpressionController {
         mouth.rotation.x = Math.PI;
         mouth.scale.set(0.8, 0.8, 1);
         mouth.rotation.z = 0.12;
-        eyebrows.left.position.y = 1.51;
-        eyebrows.right.position.y = 1.51;
+        eyebrows.left.position.y = 0.13;
+        eyebrows.right.position.y = 0.13;
         blushMat.opacity = 0.95;
         head.rotation.z = -0.12;
         break;
@@ -167,8 +167,8 @@ export class FacialExpressionController {
       case 'surprised':
         mouth.rotation.x = Math.PI * 0.5;
         mouth.scale.set(0.7, 1.4, 1);
-        eyebrows.left.position.y = 1.57;
-        eyebrows.right.position.y = 1.57;
+        eyebrows.left.position.y = 0.19;
+        eyebrows.right.position.y = 0.19;
         eyes.left.scale.set(1.3, 1.3, 1);
         eyes.right.scale.set(1.3, 1.3, 1);
         blushMat.opacity = 0.4;
@@ -179,8 +179,8 @@ export class FacialExpressionController {
         mouth.rotation.x = Math.PI;
         mouth.scale.set(1.2, 1.15, 1);
         blushMat.opacity = 0.88;
-        eyebrows.left.position.y = 1.5;
-        eyebrows.right.position.y = 1.5;
+        eyebrows.left.position.y = 0.12;
+        eyebrows.right.position.y = 0.12;
         head.rotation.z = 0.06;
         break;
     }

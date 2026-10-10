@@ -250,59 +250,34 @@ export class AvatarAnimationController {
 
     switch (inter) {
       case 'hug': {
-        // 13-step Hug execution:
-        // Intimate distance, open arms, embrace shoulders/waist, soft rocking sway
+        // Natural human embrace:
+        // Close couple proximity, arms reach forward & wrap around partner, heads rest on shoulders, gentle rock
         const embraceProgress = Math.sin(progress * Math.PI);
 
-        // Natural close step without clipping
-        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.22, 0.1);
-        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.22, 0.1);
-        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.44, 0.1);
-        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.44, 0.1);
+        // Intimate distance without mesh intersection
+        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.19, 0.12);
+        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.19, 0.12);
+        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.5, 0.12);
+        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.5, 0.12);
 
-        // User wraps arms (left over partner shoulder, right around waist)
-        uParts.arms.left.rotation.set(0.65, 0.2, -1.15 * embraceProgress);
-        uParts.arms.right.rotation.set(0.75, -0.15, -1.25 * embraceProgress);
+        // User wraps arms (left over partner shoulder, right around partner waist)
+        uParts.arms.left.rotation.set(-1.05 * embraceProgress, 0.2 * embraceProgress, 0.75 * embraceProgress);
+        uParts.arms.right.rotation.set(-0.95 * embraceProgress, -0.2 * embraceProgress, -0.75 * embraceProgress);
 
-        // Partner wraps arms reciprocally
-        pParts.arms.left.rotation.set(0.75, 0.15, 1.25 * embraceProgress);
-        pParts.arms.right.rotation.set(0.65, -0.2, 1.15 * embraceProgress);
+        // Partner reciprocates embrace warmly
+        pParts.arms.left.rotation.set(-1.05 * embraceProgress, 0.2 * embraceProgress, 0.75 * embraceProgress);
+        pParts.arms.right.rotation.set(-0.95 * embraceProgress, -0.2 * embraceProgress, -0.75 * embraceProgress);
 
-        // Gentle romantic body sway
-        const sway = Math.sin(t * 2.8) * 0.04;
+        // Romantic couple rocking sway in unison
+        const sway = Math.sin(t * 2.5) * 0.035;
         uGroup.rotation.z = sway;
         pGroup.rotation.z = -sway;
 
-        // Heads rest softly against partner
-        uParts.head.rotation.z = 0.14;
-        pParts.head.rotation.z = -0.14;
-        break;
-      }
+        // Heads rest softly tilted against partner's shoulder
+        uParts.head.rotation.z = 0.15;
+        pParts.head.rotation.z = -0.15;
 
-      case 'kiss': {
-        // Coordinated kiss: Close distance, opposite head tilts, leaning in, closed eyes
-        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.21, 0.12);
-        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.21, 0.12);
-
-        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.48, 0.1);
-        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.48, 0.1);
-
-        // Gentle head tilts to prevent nose/head clipping
-        uParts.head.rotation.z = -0.18;
-        pParts.head.rotation.z = 0.18;
-
-        // Tender lean in
-        const lean = Math.sin(progress * Math.PI) * 0.08;
-        uGroup.rotation.x = lean;
-        pGroup.rotation.x = -lean;
-
-        // Hands hold partner's waist and arms softly
-        uParts.arms.right.rotation.set(0.55, 0.1, -0.85);
-        uParts.arms.left.rotation.set(0.3, 0, -0.3);
-        pParts.arms.left.rotation.set(0.55, -0.1, 0.85);
-        pParts.arms.right.rotation.set(0.3, 0, 0.3);
-
-        // Close eyes during deep kiss
+        // Eyes closed during deep embrace
         if (progress > 0.25 && progress < 0.85) {
           if (this.userExprController) this.userExprController.setEyesClosed(true);
           if (this.partnerExprController) this.partnerExprController.setEyesClosed(true);
@@ -310,24 +285,53 @@ export class AvatarAnimationController {
         break;
       }
 
-      case 'forehead_kiss': {
-        // Initiator places gentle hands, leans in; receiver tilts head back and closes eyes
-        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.23, 0.1);
-        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.23, 0.1);
+      case 'kiss': {
+        // Coordinated kiss: Close distance, opposite head tilts, leaning in, tender closed eyes
+        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.18, 0.12);
+        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.18, 0.12);
 
-        // Receiver tilts head slightly back and rests hands
-        pParts.head.rotation.x = -0.16;
-        if (progress > 0.3 && progress < 0.85) {
+        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.5, 0.12);
+        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.5, 0.12);
+
+        // Opposite head tilts to prevent face clipping
+        uParts.head.rotation.z = -0.18;
+        pParts.head.rotation.z = 0.18;
+        uParts.head.rotation.x = -0.06;
+        pParts.head.rotation.x = 0.06;
+
+        // Hands hold partner's waist and cheeks softly
+        uParts.arms.right.rotation.set(-0.75, -0.15, -0.65);
+        uParts.arms.left.rotation.set(-0.85, 0.2, 0.55);
+        pParts.arms.left.rotation.set(-0.75, 0.15, 0.65);
+        pParts.arms.right.rotation.set(-0.85, -0.2, -0.55);
+
+        // Close eyes during kiss
+        if (progress > 0.2 && progress < 0.85) {
+          if (this.userExprController) this.userExprController.setEyesClosed(true);
+          if (this.partnerExprController) this.partnerExprController.setEyesClosed(true);
+        }
+        break;
+      }
+
+      case 'forehead_kiss': {
+        // Initiator places gentle hands on partner's cheeks, leans in; receiver tilts head back and closes eyes
+        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.2, 0.12);
+        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.2, 0.12);
+        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.5, 0.12);
+        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.5, 0.12);
+
+        // Receiver tilts head back serenely
+        pParts.head.rotation.x = 0.18;
+        pParts.arms.left.rotation.set(-0.35, 0, 0.3);
+        pParts.arms.right.rotation.set(-0.35, 0, -0.3);
+        if (progress > 0.25 && progress < 0.85) {
           if (this.partnerExprController) this.partnerExprController.setEyesClosed(true);
         }
 
-        // Initiator leans in and places hands on partner's cheeks/shoulders
-        uParts.head.rotation.x = 0.22;
-        uParts.arms.left.rotation.set(0.65, 0, -0.7);
-        uParts.arms.right.rotation.set(0.65, 0, -0.7);
-
-        pParts.arms.left.rotation.set(0.2, 0, 0.3);
-        pParts.arms.right.rotation.set(0.2, 0, 0.3);
+        // Initiator leans head down and holds partner's cheeks
+        uParts.head.rotation.x = -0.22;
+        uParts.arms.left.rotation.set(-0.85, 0.1, 0.55);
+        uParts.arms.right.rotation.set(-0.85, -0.1, -0.55);
         break;
       }
 
@@ -344,16 +348,19 @@ export class AvatarAnimationController {
         pParts.legs.right.rotation.x = -Math.PI * 0.45;
 
         // Lean together warmly
-        uGroup.rotation.z = -0.12;
+        uGroup.rotation.z = -0.14;
         pGroup.rotation.z = 0.08;
 
-        // Partner puts arm around user's shoulder
-        pParts.arms.left.rotation.set(0.25, 0, 1.25);
-        // User rests head comfortably on partner's shoulder
-        uParts.head.rotation.z = 0.26;
-        uParts.arms.right.rotation.set(0.35, 0, -0.5);
+        // Partner puts protective arm around user's shoulder
+        pParts.arms.left.rotation.set(-0.55, 0.2, 1.1);
+        pParts.arms.right.rotation.set(-0.25, 0, 0.2);
 
-        // Breathing cycle
+        // User rests head comfortably on partner's shoulder
+        uParts.head.rotation.z = 0.25;
+        uParts.arms.right.rotation.set(-0.35, 0, -0.45);
+        uParts.arms.left.rotation.set(-0.25, 0, -0.2);
+
+        // Synchronized breathing cycle
         const breath = Math.sin(t * 2.2) * 0.015;
         uGroup.position.y += breath;
         pGroup.position.y += breath;
@@ -361,61 +368,62 @@ export class AvatarAnimationController {
       }
 
       case 'hold_hands': {
-        // Aligned side-by-side holding hands with continuous micro-swing
-        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.38, 0.1);
-        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.38, 0.1);
-        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, 0.1, 0.1);
-        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -0.1, 0.1);
+        // Aligned side-by-side holding hands with continuous natural micro-swing
+        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.36, 0.12);
+        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.36, 0.12);
+        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, 0.22, 0.12);
+        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -0.22, 0.12);
 
-        // Hands connect at center
-        const handSwing = Math.sin(t * 2.6) * 0.14;
-        uParts.arms.right.rotation.set(handSwing, 0, -0.72);
-        pParts.arms.left.rotation.set(handSwing, 0, 0.72);
+        // Inner hands connect at center with natural swinging motion
+        const handSwing = Math.sin(t * 2.6) * 0.15;
+        uParts.arms.right.rotation.set(-0.15 + handSwing, 0, -0.55);
+        pParts.arms.left.rotation.set(-0.15 + handSwing, 0, 0.55);
 
-        uParts.arms.left.rotation.set(-handSwing * 0.6, 0, -0.1);
-        pParts.arms.right.rotation.set(-handSwing * 0.6, 0, 0.1);
+        uParts.arms.left.rotation.set(-0.08 - handSwing * 0.5, 0, -0.08);
+        pParts.arms.right.rotation.set(-0.08 - handSwing * 0.5, 0, 0.08);
 
         // Affectionate mutual glances
-        uParts.head.rotation.y = 0.28;
-        pParts.head.rotation.y = -0.28;
+        uParts.head.rotation.y = 0.3;
+        pParts.head.rotation.y = -0.3;
         break;
       }
 
       case 'dance': {
-        // Coordinated couple slow romantic dance
-        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.3, 0.1);
-        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.3, 0.1);
+        // Coordinated couple slow romantic waltz
+        uGroup.position.x = THREE.MathUtils.lerp(uGroup.position.x, -0.28, 0.12);
+        pGroup.position.x = THREE.MathUtils.lerp(pGroup.position.x, 0.28, 0.12);
+        uGroup.rotation.y = THREE.MathUtils.lerp(uGroup.rotation.y, Math.PI * 0.5, 0.12);
+        pGroup.rotation.y = THREE.MathUtils.lerp(pGroup.rotation.y, -Math.PI * 0.5, 0.12);
 
-        // Rhythmic dance steps
-        const dancePhase = t * 3.6;
-        const step = Math.sin(dancePhase) * 0.16;
-        const bounce = Math.abs(Math.sin(dancePhase)) * 0.05;
+        // Rhythmic dance steps and gentle sway
+        const dancePhase = t * 3.2;
+        const step = Math.sin(dancePhase) * 0.14;
+        const bounce = Math.abs(Math.sin(dancePhase)) * 0.04;
 
         uGroup.position.y = bounce;
         pGroup.position.y = bounce;
 
-        uGroup.rotation.z = step * 0.6;
-        pGroup.rotation.z = -step * 0.6;
+        uGroup.rotation.z = step * 0.5;
+        pGroup.rotation.z = -step * 0.5;
 
-        // Couple dance posture: left hand in right hand, right hand on waist
-        uParts.arms.left.rotation.set(0.5 + step, 0, -0.85);
-        uParts.arms.right.rotation.set(0.45, 0, -0.75);
+        // Couple ballroom dance frame: left hand raised with right hand, right hand on waist
+        uParts.arms.left.rotation.set(-1.15 + step * 0.5, 0, 0.7);
+        pParts.arms.right.rotation.set(-1.15 - step * 0.5, 0, -0.7);
 
-        pParts.arms.right.rotation.set(0.5 - step, 0, 0.85);
-        pParts.arms.left.rotation.set(0.45, 0, 0.75);
+        uParts.arms.right.rotation.set(-0.75, -0.15, -0.65);
+        pParts.arms.left.rotation.set(-0.85, 0.15, 0.55);
 
-        uParts.legs.left.rotation.x = step * 0.8;
-        uParts.legs.right.rotation.x = -step * 0.8;
-        pParts.legs.left.rotation.x = -step * 0.8;
-        pParts.legs.right.rotation.x = step * 0.8;
+        uParts.legs.left.rotation.x = step * 0.7;
+        uParts.legs.right.rotation.x = -step * 0.7;
+        pParts.legs.left.rotation.x = -step * 0.7;
+        pParts.legs.right.rotation.x = step * 0.7;
         break;
       }
 
       case 'blow_kiss': {
-        // Initiator blows kiss; 3D heart projectile travels to partner
+        // Initiator blows kiss; 3D heart projectile travels along Bezier curve to partner
         const blowCycle = Math.sin(progress * Math.PI);
-        uParts.arms.right.rotation.x = -1.55 * blowCycle;
-        uParts.arms.right.rotation.z = -0.35 * blowCycle;
+        uParts.arms.right.rotation.set(-1.55 * blowCycle, -0.2, -0.35 * blowCycle);
 
         // Launch 3D flying heart projectile once at peak
         if (!this.heartFired && progress > 0.4 && this.projectileSystem) {
@@ -425,18 +433,18 @@ export class AvatarAnimationController {
           this.heartFired = true;
         }
 
-        // Partner looks lovingly and waves hand in reception
-        pParts.arms.right.rotation.set(-0.8 + Math.sin(t * 5) * 0.2, 0, 0.5);
+        // Partner receives kiss: hand placed warmly on heart and smiles
+        pParts.arms.right.rotation.set(-1.1, 0, 0.45);
         break;
       }
 
       case 'flying_hearts': {
-        // Dual affectionate gesture
-        const wave = Math.sin(t * 4) * 0.35;
-        uParts.arms.left.rotation.set(0.4, 0, -1.2 + wave);
-        uParts.arms.right.rotation.set(0.4, 0, -1.2 - wave);
-        pParts.arms.left.rotation.set(0.4, 0, 1.2 + wave);
-        pParts.arms.right.rotation.set(0.4, 0, 1.2 - wave);
+        // Dual affectionate celebratory gesture
+        const wave = Math.sin(t * 3.8) * 0.25;
+        uParts.arms.left.rotation.set(-1.25, 0, 0.65 + wave);
+        uParts.arms.right.rotation.set(-1.25, 0, -0.65 - wave);
+        pParts.arms.left.rotation.set(-1.25, 0, 0.65 - wave);
+        pParts.arms.right.rotation.set(-1.25, 0, -0.65 + wave);
         break;
       }
 
@@ -451,10 +459,10 @@ export class AvatarAnimationController {
         pParts.legs.left.rotation.x = -Math.PI * 0.45;
         pParts.legs.right.rotation.x = -Math.PI * 0.45;
 
-        uParts.arms.left.rotation.set(0.2, 0, -0.2);
-        uParts.arms.right.rotation.set(0.2, 0, -0.2);
-        pParts.arms.left.rotation.set(0.2, 0, 0.2);
-        pParts.arms.right.rotation.set(0.2, 0, 0.2);
+        uParts.arms.left.rotation.set(-0.25, 0, -0.25);
+        uParts.arms.right.rotation.set(-0.25, 0, 0.25);
+        pParts.arms.left.rotation.set(-0.25, 0, -0.25);
+        pParts.arms.right.rotation.set(-0.25, 0, 0.25);
         break;
       }
 
@@ -471,9 +479,9 @@ export class AvatarAnimationController {
         uParts.head.rotation.z = 0.28;
         pParts.head.rotation.z = -0.28;
 
-        // Arms folded or relaxed
-        uParts.arms.right.rotation.set(0.3, 0, -0.4);
-        pParts.arms.left.rotation.set(0.3, 0, 0.4);
+        // Arms folded or relaxed over body
+        uParts.arms.right.rotation.set(-0.35, 0, -0.4);
+        pParts.arms.left.rotation.set(-0.35, 0, 0.4);
 
         if (this.userExprController) this.userExprController.setEyesClosed(true);
         if (this.partnerExprController) this.partnerExprController.setEyesClosed(true);

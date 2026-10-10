@@ -76,7 +76,6 @@ export class KinematicsEngine {
     // 2. Natural posture weight shifting (slow cycle ~0.5 Hz)
     const weightShift = Math.sin(t * 0.7) * 0.015;
     parts.group.rotation.z = weightShift;
-    parts.group.position.x += weightShift * 0.02;
 
     // 3. Relaxed resting arms with gentle breathing sway
     parts.arms.left.rotation.set(0.04 + breath * 0.8, 0, -0.06);

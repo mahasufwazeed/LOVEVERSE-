@@ -8,6 +8,7 @@ interface WorldState {
   myPosition: Vector3D;
   partnerPosition: Vector3D;
   currentInteraction: CoupleInteraction;
+  interactionTimestamp: number;
   myExpression: FacialExpression;
   partnerExpression: FacialExpression;
   isHeartsActive: boolean;
@@ -30,6 +31,7 @@ export const useWorldStore = create<WorldState>((set, get) => ({
   myPosition: { x: -0.75, y: 0, z: 0.2 },
   partnerPosition: { x: 0.75, y: 0, z: 0.2 },
   currentInteraction: 'idle',
+  interactionTimestamp: 0,
   myExpression: 'happy',
   partnerExpression: 'loving',
   isHeartsActive: false,
@@ -62,10 +64,12 @@ export const useWorldStore = create<WorldState>((set, get) => ({
 
   triggerInteraction: async (coupleId, senderId, type, expr = 'loving') => {
     const isRomantic = type !== 'idle';
+    const now = Date.now();
 
-    // Optimistic local animation
+    // Optimistic local animation with unique timestamp nonce
     set({
       currentInteraction: type,
+      interactionTimestamp: now,
       myExpression: expr,
       partnerExpression: expr,
       isHeartsActive: isRomantic,
@@ -75,9 +79,10 @@ export const useWorldStore = create<WorldState>((set, get) => ({
     const durationMs = (DEFAULT_TIMELINES[type]?.totalDuration || 5.8) * 1000;
 
     setTimeout(() => {
-      if (get().currentInteraction === type) {
+      if (get().interactionTimestamp === now) {
         set({
           currentInteraction: 'idle',
+          interactionTimestamp: 0,
           myExpression: 'happy',
           partnerExpression: 'happy',
           isHeartsActive: false,
@@ -153,9 +158,11 @@ export const useWorldStore = create<WorldState>((set, get) => ({
         const type = payload.type as CoupleInteraction;
         const expr = (payload.expression || 'loving') as FacialExpression;
         const isRomantic = ['hug', 'kiss', 'cuddle', 'flying_hearts', 'blow_kiss', 'forehead_kiss'].includes(type);
+        const now = payload.timestamp || Date.now();
 
         set({
           currentInteraction: type,
+          interactionTimestamp: now,
           myExpression: expr,
           partnerExpression: expr,
           isHeartsActive: isRomantic,
@@ -164,9 +171,10 @@ export const useWorldStore = create<WorldState>((set, get) => ({
         const durationMs = (DEFAULT_TIMELINES[type]?.totalDuration || 5.8) * 1000;
 
         setTimeout(() => {
-          if (get().currentInteraction === type) {
+          if (get().interactionTimestamp === now) {
             set({
               currentInteraction: 'idle',
+              interactionTimestamp: 0,
               myExpression: 'happy',
               partnerExpression: 'happy',
               isHeartsActive: false,

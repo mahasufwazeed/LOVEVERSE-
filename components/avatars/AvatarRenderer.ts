@@ -3,7 +3,7 @@ import { AvatarConfig } from '../../types';
 
 export interface AvatarParts {
   group: THREE.Group;
-  head: THREE.Mesh;
+  head: THREE.Group;
   hair: THREE.Group;
   eyes: { left: THREE.Group; right: THREE.Group };
   eyebrows: { left: THREE.Mesh; right: THREE.Mesh };
@@ -53,7 +53,11 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
     color: config.shoesColor || 0x222222,
   });
 
-  // 2. Head Shape Geometry
+  // 2. Head Pivot Group (holds head skin mesh, face features, hair, and glasses)
+  const headGroup = new THREE.Group();
+  headGroup.position.set(0, 1.38, 0);
+  avatarGroup.add(headGroup);
+
   let headGeo: THREE.BufferGeometry;
   if (config.faceShape === 'square') {
     headGeo = new THREE.BoxGeometry(0.56, 0.62, 0.54);
@@ -68,16 +72,15 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
     headGeo = new THREE.SphereGeometry(0.33, 24, 24);
   }
 
-  const head = new THREE.Mesh(headGeo, skinMat);
-  head.position.y = 1.38;
-  avatarGroup.add(head);
+  const headMesh = new THREE.Mesh(headGeo, skinMat);
+  headGroup.add(headMesh);
 
   // 3. Cute Cartoon Nose
   const noseGeo = new THREE.SphereGeometry(0.045, 12, 12);
   noseGeo.scale(1, 0.8, 1.3);
   const nose = new THREE.Mesh(noseGeo, skinMat);
-  nose.position.set(0, 1.35, 0.32);
-  avatarGroup.add(nose);
+  nose.position.set(0, -0.03, 0.32);
+  headGroup.add(nose);
 
   // 4. Stylized Eyes with Iris, Pupil & Specular Glimmer
   const eyesGroup = {
@@ -114,44 +117,44 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
     eye.add(glint);
 
     const xOffset = isLeft ? -0.12 : 0.12;
-    eye.position.set(xOffset, 1.41, 0.28);
+    eye.position.set(xOffset, 0.03, 0.28);
     return eye;
   };
 
   eyesGroup.left = createEye(true);
   eyesGroup.right = createEye(false);
-  avatarGroup.add(eyesGroup.left);
-  avatarGroup.add(eyesGroup.right);
+  headGroup.add(eyesGroup.left);
+  headGroup.add(eyesGroup.right);
 
   // 5. Eyebrows
   const browGeo = new THREE.BoxGeometry(0.08, 0.02, 0.015);
   const leftBrow = new THREE.Mesh(browGeo, eyebrowMat);
-  leftBrow.position.set(-0.12, 1.49, 0.29);
+  leftBrow.position.set(-0.12, 0.11, 0.29);
   leftBrow.rotation.z = 0.08;
-  avatarGroup.add(leftBrow);
+  headGroup.add(leftBrow);
 
   const rightBrow = new THREE.Mesh(browGeo, eyebrowMat);
-  rightBrow.position.set(0.12, 1.49, 0.29);
+  rightBrow.position.set(0.12, 0.11, 0.29);
   rightBrow.rotation.z = -0.08;
-  avatarGroup.add(rightBrow);
+  headGroup.add(rightBrow);
 
   // 6. Blushing Cheeks
   const cheekGeo = new THREE.SphereGeometry(0.055, 12, 12);
   cheekGeo.scale(1.2, 0.7, 0.4);
   const cheekL = new THREE.Mesh(cheekGeo, blushMat);
-  cheekL.position.set(-0.19, 1.3, 0.26);
-  avatarGroup.add(cheekL);
+  cheekL.position.set(-0.19, -0.08, 0.26);
+  headGroup.add(cheekL);
 
   const cheekR = new THREE.Mesh(cheekGeo, blushMat);
-  cheekR.position.set(0.19, 1.3, 0.26);
-  avatarGroup.add(cheekR);
+  cheekR.position.set(0.19, -0.08, 0.26);
+  headGroup.add(cheekR);
 
   // 7. Expressive Mouth Mesh
   const mouthGeo = new THREE.TorusGeometry(0.05, 0.016, 8, 16, Math.PI);
   const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-  mouth.position.set(0, 1.26, 0.3);
+  mouth.position.set(0, -0.12, 0.3);
   mouth.rotation.x = Math.PI; // Smile arch
-  avatarGroup.add(mouth);
+  headGroup.add(mouth);
 
   // 8. Modular Hairstyles
   const hairGroup = new THREE.Group();
@@ -160,77 +163,77 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
   if (style === 'afro') {
     const afroGeo = new THREE.SphereGeometry(0.42, 20, 20);
     const afro = new THREE.Mesh(afroGeo, hairMat);
-    afro.position.set(0, 1.48, -0.02);
+    afro.position.set(0, 0.1, -0.02);
     hairGroup.add(afro);
   } else if (style === 'bob') {
     const topGeo = new THREE.SphereGeometry(0.36, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.55);
     const top = new THREE.Mesh(topGeo, hairMat);
-    top.position.y = 1.44;
+    top.position.y = 0.06;
     hairGroup.add(top);
 
     const sideGeo = new THREE.CylinderGeometry(0.35, 0.38, 0.45, 16, 1, true, -Math.PI * 0.8, Math.PI * 1.6);
     const sides = new THREE.Mesh(sideGeo, hairMat);
-    sides.position.set(0, 1.32, -0.02);
+    sides.position.set(0, -0.06, -0.02);
     hairGroup.add(sides);
   } else if (style === 'bun') {
     const topGeo = new THREE.SphereGeometry(0.35, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.6);
     const top = new THREE.Mesh(topGeo, hairMat);
-    top.position.y = 1.44;
+    top.position.y = 0.06;
     hairGroup.add(top);
 
     const bunGeo = new THREE.SphereGeometry(0.16, 16, 16);
     const bun = new THREE.Mesh(bunGeo, hairMat);
-    bun.position.set(0, 1.82, -0.1);
+    bun.position.set(0, 0.44, -0.1);
     hairGroup.add(bun);
   } else if (style === 'curly') {
     const baseGeo = new THREE.SphereGeometry(0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6);
     const base = new THREE.Mesh(baseGeo, hairMat);
-    base.position.y = 1.44;
+    base.position.y = 0.06;
     hairGroup.add(base);
 
     // Curls bubbles
     for (let i = 0; i < 9; i++) {
       const curl = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), hairMat);
       const angle = (i / 9) * Math.PI * 2;
-      curl.position.set(Math.cos(angle) * 0.28, 1.62 + Math.sin(i) * 0.06, Math.sin(angle) * 0.28);
+      curl.position.set(Math.cos(angle) * 0.28, 0.24 + Math.sin(i) * 0.06, Math.sin(angle) * 0.28);
       hairGroup.add(curl);
     }
   } else if (style === 'spiky') {
     const baseGeo = new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6);
     const base = new THREE.Mesh(baseGeo, hairMat);
-    base.position.y = 1.44;
+    base.position.y = 0.06;
     hairGroup.add(base);
 
     for (let i = 0; i < 5; i++) {
       const spike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.25, 8), hairMat);
-      spike.position.set((i - 2) * 0.1, 1.76, 0);
+      spike.position.set((i - 2) * 0.1, 0.38, 0);
       spike.rotation.z = (i - 2) * -0.2;
       hairGroup.add(spike);
     }
   } else if (style === 'long' || style === 'wavy') {
     const baseGeo = new THREE.SphereGeometry(0.35, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.6);
     const base = new THREE.Mesh(baseGeo, hairMat);
-    base.position.y = 1.44;
+    base.position.y = 0.06;
     hairGroup.add(base);
 
     const tressGeo = new THREE.CylinderGeometry(0.09, 0.06, 0.6, 12);
     const tressL = new THREE.Mesh(tressGeo, hairMat);
-    tressL.position.set(-0.29, 1.2, 0.05);
+    tressL.position.set(-0.29, -0.18, 0.05);
     tressL.rotation.z = 0.1;
     hairGroup.add(tressL);
 
     const tressR = new THREE.Mesh(tressGeo, hairMat);
-    tressR.position.set(0.29, 1.2, 0.05);
+    tressR.position.set(0.29, -0.18, 0.05);
     tressR.rotation.z = -0.1;
     hairGroup.add(tressR);
   } else {
     // Short crop
     const shortGeo = new THREE.SphereGeometry(0.35, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.55);
     const shortHair = new THREE.Mesh(shortGeo, hairMat);
-    shortHair.position.y = 1.44;
+    shortHair.position.y = 0.06;
     hairGroup.add(shortHair);
   }
-  avatarGroup.add(hairGroup);
+  headGroup.add(hairGroup);
 
   // 9. Glasses (if selected)
   let glassesGroup: THREE.Group | undefined;
@@ -240,29 +243,29 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
     const gMat = new THREE.MeshBasicMaterial({ color: frameColor });
 
     const rimL = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.014, 8, 16), gMat);
-    rimL.position.set(-0.12, 1.41, 0.31);
+    rimL.position.set(-0.12, 0.03, 0.31);
     glassesGroup.add(rimL);
 
     const rimR = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.014, 8, 16), gMat);
-    rimR.position.set(0.12, 1.41, 0.31);
+    rimR.position.set(0.12, 0.03, 0.31);
     glassesGroup.add(rimR);
 
     // Bridge
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.014, 0.014), gMat);
-    bridge.position.set(0, 1.41, 0.32);
+    bridge.position.set(0, 0.03, 0.32);
     glassesGroup.add(bridge);
 
     if (config.glasses === 'sunglasses') {
       const tintMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.85 });
       const lensL = new THREE.Mesh(new THREE.CircleGeometry(0.075, 16), tintMat);
-      lensL.position.set(-0.12, 1.41, 0.31);
+      lensL.position.set(-0.12, 0.03, 0.31);
       glassesGroup.add(lensL);
 
       const lensR = new THREE.Mesh(new THREE.CircleGeometry(0.075, 16), tintMat);
-      lensR.position.set(0.12, 1.41, 0.31);
+      lensR.position.set(0.12, 0.03, 0.31);
       glassesGroup.add(lensR);
     }
-    avatarGroup.add(glassesGroup);
+    headGroup.add(glassesGroup);
   }
 
   // 10. Torso & Outfits
@@ -325,7 +328,7 @@ export function createBitmojiAvatar(config: AvatarConfig, isPartner: boolean = f
 
   return {
     group: avatarGroup,
-    head,
+    head: headGroup,
     hair: hairGroup,
     eyes: eyesGroup,
     eyebrows: { left: leftBrow, right: rightBrow },

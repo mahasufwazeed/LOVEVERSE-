@@ -56,7 +56,7 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
 
   const { profile } = useAuthStore();
   const { partner } = useCoupleStore();
-  const { currentInteraction, myExpression, partnerExpression } = useWorldStore();
+  const { currentInteraction, interactionTimestamp, myExpression, partnerExpression } = useWorldStore();
 
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
@@ -103,8 +103,13 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
   useEffect(() => {
     if (animControllerRef.current) {
       animControllerRef.current.setInteraction(currentInteraction);
+      if (currentInteraction !== 'idle') {
+        cameraControllerRef.current.setPreset('couple_focus');
+      } else {
+        cameraControllerRef.current.setPreset(cameraPreset);
+      }
     }
-  }, [currentInteraction]);
+  }, [currentInteraction, interactionTimestamp]);
 
   // Synchronize Facial Expressions
   useEffect(() => {
@@ -433,19 +438,40 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
     };
   }, []);
 
-  // Handle Drag on Screen to Orbit Camera
+  // Handle Drag on Screen to Orbit Camera (Touch & Desktop Mouse)
+  const handleTouchStart = (evt: any) => {
+    const pageX = evt.nativeEvent?.pageX ?? evt.pageX;
+    const pageY = evt.nativeEvent?.pageY ?? evt.pageY;
+    if (pageX != null && pageY != null) {
+      lastTouchRef.current = { x: pageX, y: pageY };
+    }
+  };
+
   const handleTouchMove = (evt: any) => {
-    const { pageX, pageY } = evt.nativeEvent;
-    if (lastTouchRef.current) {
+    const pageX = evt.nativeEvent?.pageX ?? evt.pageX;
+    const pageY = evt.nativeEvent?.pageY ?? evt.pageY;
+    if (pageX != null && pageY != null && lastTouchRef.current) {
       const deltaX = (pageX - lastTouchRef.current.x) * 0.007;
       const deltaY = (pageY - lastTouchRef.current.y) * 0.007;
       cameraControllerRef.current.rotate(-deltaX, deltaY);
     }
-    lastTouchRef.current = { x: pageX, y: pageY };
+    if (pageX != null && pageY != null) {
+      lastTouchRef.current = { x: pageX, y: pageY };
+    }
   };
 
   const handleTouchEnd = () => {
     lastTouchRef.current = null;
+  };
+
+  // Dynamically resize Three.js WebGL canvas and camera aspect when container layout changes
+  const handleCanvasLayout = (e: any) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0 && rendererRef.current && cameraRef.current) {
+      cameraRef.current.aspect = width / height;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(width, height, false);
+    }
   };
 
   const selectedItem = room.objects.find((o) => o.id === selectedObjectId);
@@ -483,12 +509,26 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
 
   return (
     <View style={styles.container}>
-      {/* 3D GLView Canvas with Touch Drag Handling */}
+      {/* 3D GLView Canvas with Touch & Mouse Drag Handling */}
       <View
         style={styles.canvasContainer}
+        onLayout={handleCanvasLayout}
+        onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={handleTouchStart}
+        onResponderMove={handleTouchMove}
+        onResponderRelease={handleTouchEnd}
+        onResponderTerminate={handleTouchEnd}
+        {...({
+          onPointerDown: handleTouchStart,
+          onPointerMove: handleTouchMove,
+          onPointerUp: handleTouchEnd,
+          cursor: 'grab',
+        } as any)}
       >
         <GLView style={styles.glView} onContextCreate={onContextCreate} />
 
