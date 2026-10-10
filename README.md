@@ -8,6 +8,7 @@
 ## 🚀 Key Highlights & Architecture
 
 - **Hardware-Accelerated 3D Virtual Room & Avatars**: Real Three.js WebGL rendering powered by Expo-GL (`ThreeRoomCanvas`). Features procedural 3D cartoon avatars with customizable skin tones, hairstyles, hair colors, eye colors, shirt and pants colors, articulated limbs, and coordinated hug/kiss animations with floating heart particles.
+- **Unreal Engine 3D Render Path**: Optional Unreal Pixel Streaming launcher for a high-fidelity 3D room, with LoveVerse couple and user context passed into the Unreal session.
 - **Private Partner Pairing**: Atomic PostgreSQL locking via RPC (`create_space` & `join_space`) enforcing strict two-person isolation with single-use, 48-hour 6-character invitation codes.
 - **Real-Time Private Chat**: Optimistic message delivery, typing presence, interactive emoji reactions (`❤️`, `🥰`, `💋`, `✨`, `🥺`), and embedded affection cards.
 - **Multiplayer Couple Games**:
@@ -28,6 +29,7 @@
 | **Routing** | Expo Router ~6.0.0 (Tab & Stack Navigation) |
 | **State Management** | Zustand 5.x |
 | **3D Rendering** | Three.js (r128+) + Expo-GL |
+| **High-Fidelity 3D Option** | Unreal Engine 5 Pixel Streaming |
 | **Video Engine** | Expo Video ~3.0.0 |
 | **Backend & Auth** | Supabase (PostgreSQL 15+ with Row-Level Security) |
 | **Realtime Gateway** | Supabase Realtime (WebSockets & Postgres Changes) |
@@ -50,7 +52,10 @@
    ```env
    EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+   EXPO_PUBLIC_UNREAL_PIXEL_STREAMING_URL=https://your-unreal-stream.example.com
    ```
+
+Unreal setup details are documented in [`UNREAL_ENGINE_INTEGRATION.md`](UNREAL_ENGINE_INTEGRATION.md).
 
 ### 3. Run Automated Tests
 ```bash
