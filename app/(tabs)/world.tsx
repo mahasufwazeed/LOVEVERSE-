@@ -68,11 +68,9 @@ export default function WorldScreen() {
   }, [couple?.id, profile?.id]);
 
   const handleInteraction = async (type: CoupleInteraction, expr: FacialExpression) => {
-    if (!couple?.id || !profile?.id) {
-      Alert.alert('Not Paired', 'Please connect with your partner first to share interactions.');
-      return;
-    }
-    await triggerInteraction(couple.id, profile.id, type, expr);
+    const effectiveCoupleId = couple?.id || 'solo-space';
+    const effectiveProfileId = profile?.id || 'local-user';
+    await triggerInteraction(effectiveCoupleId, effectiveProfileId, type, expr);
   };
 
   return (
@@ -97,26 +95,39 @@ export default function WorldScreen() {
         </Card>
 
         {/* 10 Coordinated Couple Interactions Grid */}
-        <Text style={styles.sectionTitle}>Couple Romantic Interactions</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Couple Romantic Interactions</Text>
+          {currentInteraction !== 'idle' && (
+            <Badge label={`Playing: ${currentInteraction} ❤️`} variant="primary" />
+          )}
+        </View>
+        <Text style={styles.sectionSubtitle}>
+          {partner
+            ? `Tap any interaction to trigger live synchronized 3D animations with ${partner.displayName}`
+            : 'Tap any interaction to preview coordinated 3D animations & floating hearts'}
+        </Text>
         <View style={styles.actionsGrid}>
-          {ROMANTIC_ACTIONS.map((act) => (
-            <Pressable
-              key={act.type}
-              disabled={!couple?.id}
-              onPress={() => handleInteraction(act.type, act.expr)}
-              style={({ pressed }) => [
-                styles.actionChip,
-                currentInteraction === act.type && styles.actionChipActive,
-                pressed && { transform: [{ scale: 0.95 }] },
-                !couple?.id && { opacity: 0.5 },
-              ]}
-            >
-              <Text style={styles.actionIcon}>{act.icon}</Text>
-              <Text style={[styles.actionLabel, currentInteraction === act.type && styles.actionLabelActive]}>
-                {act.label}
-              </Text>
-            </Pressable>
-          ))}
+          {ROMANTIC_ACTIONS.map((act) => {
+            const isActive = currentInteraction === act.type;
+            return (
+              <Pressable
+                key={act.type}
+                accessibilityRole="button"
+                accessibilityLabel={act.label}
+                onPress={() => handleInteraction(act.type, act.expr)}
+                style={({ pressed }) => [
+                  styles.actionChip,
+                  isActive && styles.actionChipActive,
+                  pressed && { transform: [{ scale: 0.95 }] },
+                ]}
+              >
+                <Text style={styles.actionIcon}>{act.icon}</Text>
+                <Text style={[styles.actionLabel, isActive && styles.actionLabelActive]}>
+                  {act.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Facial Expression Switcher */}
@@ -203,11 +214,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF6FA',
     marginBottom: Spacing.sm,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+    marginBottom: 2,
+    marginRight: 4,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: Colors.textDark,
-    marginTop: Spacing.sm,
+    marginLeft: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 11,
+    color: Colors.textMuted,
     marginBottom: Spacing.xs,
     marginLeft: 4,
   },
@@ -224,13 +247,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: '#FEE2E2',
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
     ...Shadows.soft,
   },
   actionChipActive: {
     backgroundColor: Colors.primarySoft,
     borderColor: Colors.primary,
+    borderWidth: 2,
+    transform: [{ scale: 1.03 }],
   },
   actionIcon: {
     fontSize: 18,
@@ -255,12 +282,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: Radii.full,
     marginRight: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
   },
   exprChipActive: {
     backgroundColor: '#F3E8FF',
     borderColor: Colors.lavender,
+    borderWidth: 2,
   },
   exprIcon: {
     fontSize: 16,

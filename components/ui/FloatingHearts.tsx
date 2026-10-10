@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 
 interface FloatingHeartsProps {
   active: boolean;
@@ -31,17 +31,17 @@ export function FloatingHearts({ active, count = 12 }: FloatingHeartsProps) {
           Animated.timing(anim.y, {
             toValue: -280 - Math.random() * 100,
             duration: 1800 + Math.random() * 600,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.timing(anim.opacity, {
             toValue: 0,
             duration: 2000,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
           Animated.spring(anim.scale, {
             toValue: 1.4,
             friction: 4,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
           }),
         ]),
       ]).start();
@@ -80,8 +80,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
+    pointerEvents: 'none' as any,
   },
   heartItem: {
     position: 'absolute',
+    pointerEvents: 'none' as any,
   },
 });

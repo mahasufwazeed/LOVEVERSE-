@@ -25,6 +25,28 @@ export type CoupleInteraction =
 
 export type InteractionType = CoupleInteraction;
 
+export type CharacterState =
+  | 'IDLE'
+  | 'WALKING'
+  | 'TURNING'
+  | 'APPROACHING_PARTNER'
+  | 'ALIGNING'
+  | 'INTERACTING'
+  | 'REACTING'
+  | 'RETURNING_TO_IDLE'
+  | 'SITTING'
+  | 'LYING_DOWN'
+  | 'SLEEPING';
+
+export type InteractionPhase =
+  | 'IDLE'
+  | 'TURNING'
+  | 'APPROACHING'
+  | 'ALIGNING'
+  | 'ACTION'
+  | 'REACTION'
+  | 'RETURNING';
+
 export interface AvatarConfig {
   genderPresentation?: 'masculine' | 'feminine' | 'neutral';
   faceShape?: 'round' | 'oval' | 'square' | 'heart';

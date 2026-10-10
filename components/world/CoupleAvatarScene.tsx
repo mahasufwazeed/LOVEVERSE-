@@ -215,10 +215,6 @@ export function CoupleAvatarScene({
     scene.add(userParts.group);
     scene.add(partnerParts.group);
 
-    // Attach Controllers
-    const animController = new AvatarAnimationController(userParts, partnerParts);
-    animControllerRef.current = animController;
-
     const myExprController = new FacialExpressionController(userParts);
     myExprController.setExpression(myExpression);
     myExprControllerRef.current = myExprController;
@@ -226,6 +222,11 @@ export function CoupleAvatarScene({
     const partnerExprController = new FacialExpressionController(partnerParts);
     partnerExprController.setExpression(partnerExpression);
     partnerExprControllerRef.current = partnerExprController;
+
+    // Attach Controllers
+    const animController = new AvatarAnimationController(userParts, partnerParts);
+    animController.setFacialControllers(myExprController, partnerExprController);
+    animControllerRef.current = animController;
 
     // 4. 3D Floating Heart Particle System
     const heartsGroup = new THREE.Group();

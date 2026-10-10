@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Vector3D, CoupleInteraction, FacialExpression, AvatarInteraction } from '../types';
+import { DEFAULT_TIMELINES } from '../components/avatars/AnimationStateMachine';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface WorldState {
@@ -60,7 +61,7 @@ export const useWorldStore = create<WorldState>((set, get) => ({
   },
 
   triggerInteraction: async (coupleId, senderId, type, expr = 'loving') => {
-    const isRomantic = ['hug', 'kiss', 'cuddle', 'flying_hearts', 'blow_kiss', 'forehead_kiss'].includes(type);
+    const isRomantic = type !== 'idle';
 
     // Optimistic local animation
     set({
@@ -70,15 +71,19 @@ export const useWorldStore = create<WorldState>((set, get) => ({
       isHeartsActive: isRomantic,
     });
 
-    // Reset back to idle after 3.8 seconds
+    // Dynamic duration from deterministic animation timeline
+    const durationMs = (DEFAULT_TIMELINES[type]?.totalDuration || 5.8) * 1000;
+
     setTimeout(() => {
-      set({
-        currentInteraction: 'idle',
-        myExpression: 'happy',
-        partnerExpression: 'happy',
-        isHeartsActive: false,
-      });
-    }, 3800);
+      if (get().currentInteraction === type) {
+        set({
+          currentInteraction: 'idle',
+          myExpression: 'happy',
+          partnerExpression: 'happy',
+          isHeartsActive: false,
+        });
+      }
+    }, durationMs);
 
     const channel = get().channel;
     if (channel) {
@@ -89,7 +94,14 @@ export const useWorldStore = create<WorldState>((set, get) => ({
       });
     }
 
-    if (isSupabaseConfigured) {
+    if (
+      isSupabaseConfigured &&
+      coupleId &&
+      coupleId !== 'solo-space' &&
+      coupleId !== 'demo-space' &&
+      senderId &&
+      senderId !== 'local-user'
+    ) {
       try {
         await supabase.from('avatar_interactions').insert({
           couple_id: coupleId,
@@ -149,14 +161,18 @@ export const useWorldStore = create<WorldState>((set, get) => ({
           isHeartsActive: isRomantic,
         });
 
+        const durationMs = (DEFAULT_TIMELINES[type]?.totalDuration || 5.8) * 1000;
+
         setTimeout(() => {
-          set({
-            currentInteraction: 'idle',
-            myExpression: 'happy',
-            partnerExpression: 'happy',
-            isHeartsActive: false,
-          });
-        }, 3800);
+          if (get().currentInteraction === type) {
+            set({
+              currentInteraction: 'idle',
+              myExpression: 'happy',
+              partnerExpression: 'happy',
+              isHeartsActive: false,
+            });
+          }
+        }, durationMs);
       }
     });
 

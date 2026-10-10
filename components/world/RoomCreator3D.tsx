@@ -24,6 +24,7 @@ import { FURNITURE_CATALOG, CATEGORY_LABELS } from '../../constants/furnitureCat
 import { createBitmojiAvatar } from '../avatars/AvatarRenderer';
 import { FacialExpressionController } from '../avatars/FacialExpressionController';
 import { AvatarAnimationController } from '../avatars/AvatarAnimationController';
+import { ProjectileHearts3D } from './ProjectileHearts3D';
 import { CameraPreset, FurnitureCatalogItem, RoomObject } from '../../types/room';
 
 interface RoomCreator3DProps {
@@ -72,6 +73,19 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
   const furnitureGroupRef = useRef<THREE.Group | null>(null);
   const gridHelperRef = useRef<THREE.GridHelper | null>(null);
 
+  // Lighting and Environment References
+  const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const pointLightRef = useRef<THREE.PointLight | null>(null);
+  const floorMeshRef = useRef<THREE.Mesh | null>(null);
+  const floorMatRef = useRef<THREE.MeshLambertMaterial | null>(null);
+  const wallMatRef = useRef<THREE.MeshLambertMaterial | null>(null);
+  const backWallRef = useRef<THREE.Mesh | null>(null);
+  const leftWallRef = useRef<THREE.Mesh | null>(null);
+  const windowFrameRef = useRef<THREE.Mesh | null>(null);
+  const windowSkyRef = useRef<THREE.Mesh | null>(null);
+  const skyMatRef = useRef<THREE.MeshBasicMaterial | null>(null);
+
   // Avatar Controllers
   const animControllerRef = useRef<AvatarAnimationController | null>(null);
   const myExprControllerRef = useRef<FacialExpressionController | null>(null);
@@ -84,6 +98,96 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
   useEffect(() => {
     cameraControllerRef.current.setPreset(cameraPreset);
   }, [cameraPreset]);
+
+  // Synchronize 3D Avatar Animations when interaction changes
+  useEffect(() => {
+    if (animControllerRef.current) {
+      animControllerRef.current.setInteraction(currentInteraction);
+    }
+  }, [currentInteraction]);
+
+  // Synchronize Facial Expressions
+  useEffect(() => {
+    if (myExprControllerRef.current) {
+      myExprControllerRef.current.setExpression(myExpression);
+    }
+  }, [myExpression]);
+
+  useEffect(() => {
+    if (partnerExprControllerRef.current) {
+      partnerExprControllerRef.current.setExpression(partnerExpression);
+    }
+  }, [partnerExpression]);
+
+  // Synchronize Wall Color
+  useEffect(() => {
+    if (wallMatRef.current && room.wallColor) {
+      const hex = parseInt(room.wallColor.replace('#', '0x'), 16) || 0xfdf0ed;
+      wallMatRef.current.color.set(hex);
+    }
+  }, [room.wallColor]);
+
+  // Synchronize Floor Material
+  useEffect(() => {
+    if (floorMatRef.current && room.floorMaterial) {
+      const floorColor = FLOOR_COLORS[room.floorMaterial] || FLOOR_COLORS.hardwood_oak;
+      floorMatRef.current.color.set(floorColor);
+    }
+  }, [room.floorMaterial]);
+
+  // Synchronize Atmosphere & Lighting
+  useEffect(() => {
+    const lightCfg = LIGHTING_COLORS[room.lightingTheme] || LIGHTING_COLORS.warm_sunset;
+    if (ambientLightRef.current) {
+      ambientLightRef.current.color.set(lightCfg.ambient);
+      ambientLightRef.current.intensity = lightCfg.ambientInt;
+    }
+    if (dirLightRef.current) {
+      dirLightRef.current.color.set(lightCfg.dir);
+      dirLightRef.current.intensity = lightCfg.dirInt;
+    }
+    if (pointLightRef.current) {
+      pointLightRef.current.color.set(lightCfg.point);
+    }
+  }, [room.lightingTheme]);
+
+  // Synchronize Window View
+  useEffect(() => {
+    const sceneryColors: Record<string, number> = {
+      city_sunset: 0xffaa66,
+      beach_ocean: 0x48cae4,
+      mountain_stars: 0x1d3557,
+      fairy_forest: 0x52b788,
+      rainy_window: 0x6c757d,
+    };
+    if (skyMatRef.current) {
+      skyMatRef.current.color.set(sceneryColors[room.windowScenery] || 0xffaa66);
+    }
+  }, [room.windowScenery]);
+
+  // Synchronize Room Dimensions (e.g. when template changes)
+  useEffect(() => {
+    if (floorMeshRef.current) {
+      floorMeshRef.current.geometry.dispose();
+      floorMeshRef.current.geometry = new THREE.BoxGeometry(room.dimensions.width, 0.2, room.dimensions.depth);
+    }
+    if (backWallRef.current) {
+      backWallRef.current.geometry.dispose();
+      backWallRef.current.geometry = new THREE.BoxGeometry(room.dimensions.width, room.dimensions.height, 0.2);
+      backWallRef.current.position.set(0, room.dimensions.height / 2, -room.dimensions.depth / 2);
+    }
+    if (leftWallRef.current) {
+      leftWallRef.current.geometry.dispose();
+      leftWallRef.current.geometry = new THREE.BoxGeometry(0.2, room.dimensions.height, room.dimensions.depth);
+      leftWallRef.current.position.set(-room.dimensions.width / 2, room.dimensions.height / 2, 0);
+    }
+    if (windowFrameRef.current) {
+      windowFrameRef.current.position.set(0, 2.0, -room.dimensions.depth / 2 + 0.12);
+    }
+    if (windowSkyRef.current) {
+      windowSkyRef.current.position.set(0, 2.0, -room.dimensions.depth / 2 + 0.16);
+    }
+  }, [room.dimensions.width, room.dimensions.height, room.dimensions.depth]);
 
   // Synchronize Scene Furniture whenever room.objects or selectedObjectId changes
   useEffect(() => {
@@ -101,6 +205,10 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
       const mesh = FurnitureMeshBuilder.buildFurniture(obj, isSelected);
       group.add(mesh);
     });
+
+    if (animControllerRef.current) {
+      animControllerRef.current.setRoomObjects(room.objects);
+    }
   }, [room.objects, selectedObjectId, mode]);
 
   // Toggle Grid in Edit Mode
@@ -142,23 +250,30 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
     // Lighting Setup
     const lightCfg = LIGHTING_COLORS[room.lightingTheme] || LIGHTING_COLORS.warm_sunset;
     const ambientLight = new THREE.AmbientLight(lightCfg.ambient, lightCfg.ambientInt);
+    ambientLightRef.current = ambientLight;
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(lightCfg.dir, lightCfg.dirInt);
     dirLight.position.set(5, 9, 6);
+    dirLightRef.current = dirLight;
     scene.add(dirLight);
 
     const pointLight = new THREE.PointLight(lightCfg.point, 1.2, 12);
     pointLight.position.set(0, 3.2, 0);
+    pointLightRef.current = pointLight;
     scene.add(pointLight);
 
     // 1. Floor & Walls
     const floorColor = FLOOR_COLORS[room.floorMaterial] || FLOOR_COLORS.hardwood_oak;
+    const floorMat = new THREE.MeshLambertMaterial({ color: floorColor });
+    floorMatRef.current = floorMat;
+
     const floor = new THREE.Mesh(
       new THREE.BoxGeometry(room.dimensions.width, 0.2, room.dimensions.depth),
-      new THREE.MeshLambertMaterial({ color: floorColor })
+      floorMat
     );
     floor.position.y = -0.1;
+    floorMeshRef.current = floor;
     scene.add(floor);
 
     // Grid Overlay for Edit Mode
@@ -176,12 +291,14 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
     // Back Wall
     const wallHex = parseInt(room.wallColor.replace('#', '0x'), 16) || 0xfdf0ed;
     const wallMat = new THREE.MeshLambertMaterial({ color: wallHex });
+    wallMatRef.current = wallMat;
 
     const backWall = new THREE.Mesh(
       new THREE.BoxGeometry(room.dimensions.width, room.dimensions.height, 0.2),
       wallMat
     );
     backWall.position.set(0, room.dimensions.height / 2, -room.dimensions.depth / 2);
+    backWallRef.current = backWall;
     scene.add(backWall);
 
     // Left Wall
@@ -190,6 +307,7 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
       wallMat
     );
     leftWall.position.set(-room.dimensions.width / 2, room.dimensions.height / 2, 0);
+    leftWallRef.current = leftWall;
     scene.add(leftWall);
 
     // Window with scenery
@@ -198,6 +316,7 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
       new THREE.MeshLambertMaterial({ color: 0xffffff })
     );
     windowFrame.position.set(0, 2.0, -room.dimensions.depth / 2 + 0.12);
+    windowFrameRef.current = windowFrame;
 
     const sceneryColors: Record<string, number> = {
       city_sunset: 0xffaa66,
@@ -207,8 +326,11 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
       rainy_window: 0x6c757d,
     };
     const skyMat = new THREE.MeshBasicMaterial({ color: sceneryColors[room.windowScenery] || 0xffaa66 });
+    skyMatRef.current = skyMat;
+
     const sky = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.2), skyMat);
     sky.position.set(0, 2.0, -room.dimensions.depth / 2 + 0.16);
+    windowSkyRef.current = sky;
     scene.add(windowFrame, sky);
 
     // 2. Furniture Container
@@ -254,17 +376,22 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
 
     scene.add(myAvatar.group, partnerAvatar.group);
 
-    // Animation Controllers
-    const animController = new AvatarAnimationController(myAvatar, partnerAvatar);
-    animController.setInteraction(currentInteraction);
-    animControllerRef.current = animController;
+    // 3D Flying Heart Projectile System
+    const projSystem = new ProjectileHearts3D(scene);
 
+    // Animation & Facial Expression Controllers
     const myExpr = new FacialExpressionController(myAvatar);
     const partnerExpr = new FacialExpressionController(partnerAvatar);
     myExpr.setExpression(myExpression);
     partnerExpr.setExpression(partnerExpression);
     myExprControllerRef.current = myExpr;
     partnerExprControllerRef.current = partnerExpr;
+
+    const animController = new AvatarAnimationController(myAvatar, partnerAvatar, room.objects);
+    animController.setFacialControllers(myExpr, partnerExpr);
+    animController.setProjectileSystem(projSystem);
+    animController.setInteraction(currentInteraction);
+    animControllerRef.current = animController;
 
     // 4. Render Loop
     let clock = new THREE.Clock();
@@ -275,10 +402,13 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
       const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
-      // Update couple animations
+      // Update couple kinematics & animation state machine
       if (animControllerRef.current) {
         animControllerRef.current.update(delta, elapsed);
       }
+
+      // Update 3D projectile hearts
+      projSystem.update(delta);
 
       // Update Camera
       if (cameraRef.current) {
@@ -552,8 +682,8 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
 
       {/* --- Catalog Modal Drawer --- */}
       <Modal visible={isCatalogOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.catalogModal}>
+        <Pressable style={styles.modalOverlay} onPress={() => setIsCatalogOpen(false)}>
+          <Pressable style={styles.catalogModal} onPress={(e) => (e as any).stopPropagation?.()}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Furniture Catalog 🛋️</Text>
               <Pressable onPress={() => setIsCatalogOpen(false)}>
@@ -609,14 +739,14 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
                 </Pressable>
               ))}
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* --- Templates Modal --- */}
       <Modal visible={isTemplatesOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.catalogModal}>
+        <Pressable style={styles.modalOverlay} onPress={() => setIsTemplatesOpen(false)}>
+          <Pressable style={styles.catalogModal} onPress={(e) => (e as any).stopPropagation?.()}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Starter Room Templates 🏠</Text>
               <Pressable onPress={() => setIsTemplatesOpen(false)}>
@@ -625,43 +755,41 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
             </View>
 
             <ScrollView contentContainerStyle={styles.templatesList}>
-              {ROOM_TEMPLATES.map((tmpl) => (
-                <Pressable
-                  key={tmpl.id}
-                  onPress={() => {
-                    Alert.alert(
-                      'Load Template',
-                      `Apply "${tmpl.name}"? This will redecorate your room layout.`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Apply Template',
-                          onPress: () => {
-                            applyTemplate(tmpl.id);
-                            setIsTemplatesOpen(false);
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                  style={styles.templateCard}
-                >
-                  <Text style={styles.templateIcon}>{tmpl.icon}</Text>
-                  <View style={styles.templateDetails}>
-                    <Text style={styles.templateName}>{tmpl.name}</Text>
-                    <Text style={styles.templateDesc}>{tmpl.description}</Text>
-                  </View>
-                </Pressable>
-              ))}
+              {ROOM_TEMPLATES.map((tmpl) => {
+                const isCurrent = room.name === tmpl.name;
+                return (
+                  <Pressable
+                    key={tmpl.id}
+                    onPress={() => {
+                      applyTemplate(tmpl.id);
+                      setIsTemplatesOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.templateCard,
+                      isCurrent && styles.templateCardActive,
+                      pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                    ]}
+                  >
+                    <Text style={styles.templateIcon}>{tmpl.icon}</Text>
+                    <View style={styles.templateDetails}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={styles.templateName}>{tmpl.name}</Text>
+                        {isCurrent && <Text style={styles.activeTag}>Current Layout</Text>}
+                      </View>
+                      <Text style={styles.templateDesc}>{tmpl.description}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* --- Room Colors & Lighting Settings Modal --- */}
       <Modal visible={isSettingsOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.catalogModal}>
+        <Pressable style={styles.modalOverlay} onPress={() => setIsSettingsOpen(false)}>
+          <Pressable style={styles.catalogModal} onPress={(e) => (e as any).stopPropagation?.()}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Room Theme & Lighting 🎨</Text>
               <Pressable onPress={() => setIsSettingsOpen(false)}>
@@ -693,18 +821,23 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
                   { key: 'marble_pink', label: 'Rose Marble 🏛️' },
                   { key: 'pastel_tile', label: 'Pastel Tile 🧊' },
                   { key: 'cozy_carpet', label: 'Plush Carpet 🧶' },
-                ].map((opt) => (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => updateRoomSettings({ floorMaterial: opt.key as any })}
-                    style={[
-                      styles.optionChip,
-                      room.floorMaterial === opt.key && styles.optionChipActive,
-                    ]}
-                  >
-                    <Text style={styles.optionChipText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
+                ].map((opt) => {
+                  const isActive = room.floorMaterial === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => updateRoomSettings({ floorMaterial: opt.key as any })}
+                      style={[
+                        styles.optionChip,
+                        isActive && styles.optionChipActive,
+                      ]}
+                    >
+                      <Text style={[styles.optionChipText, isActive && styles.optionChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
 
               <Text style={styles.settingHeading}>Atmosphere & Lighting</Text>
@@ -715,18 +848,23 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
                   { key: 'cozy_candlelight', label: 'Candlelight 🕯️' },
                   { key: 'bright_daylight', label: 'Bright Daylight ☀️' },
                   { key: 'midnight_stars', label: 'Midnight Stars 🌌' },
-                ].map((opt) => (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => updateRoomSettings({ lightingTheme: opt.key as any })}
-                    style={[
-                      styles.optionChip,
-                      room.lightingTheme === opt.key && styles.optionChipActive,
-                    ]}
-                  >
-                    <Text style={styles.optionChipText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
+                ].map((opt) => {
+                  const isActive = room.lightingTheme === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => updateRoomSettings({ lightingTheme: opt.key as any })}
+                      style={[
+                        styles.optionChip,
+                        isActive && styles.optionChipActive,
+                      ]}
+                    >
+                      <Text style={[styles.optionChipText, isActive && styles.optionChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
 
               <Text style={styles.settingHeading}>Window View</Text>
@@ -736,22 +874,27 @@ export function RoomCreator3D({ onOpenWatchParty, onOpenPhotoPicker }: RoomCreat
                   { key: 'beach_ocean', label: 'Ocean Waves 🌊' },
                   { key: 'mountain_stars', label: 'Starry Mountains 🏔️' },
                   { key: 'fairy_forest', label: 'Fairy Forest 🌲' },
-                ].map((opt) => (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => updateRoomSettings({ windowScenery: opt.key as any })}
-                    style={[
-                      styles.optionChip,
-                      room.windowScenery === opt.key && styles.optionChipActive,
-                    ]}
-                  >
-                    <Text style={styles.optionChipText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
+                ].map((opt) => {
+                  const isActive = room.windowScenery === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => updateRoomSettings({ windowScenery: opt.key as any })}
+                      style={[
+                        styles.optionChip,
+                        isActive && styles.optionChipActive,
+                      ]}
+                    >
+                      <Text style={[styles.optionChipText, isActive && styles.optionChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -1047,6 +1190,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.textMuted,
     padding: 6,
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
   },
   categoryTabs: {
     flexDirection: 'row',
@@ -1061,6 +1206,8 @@ const styles = StyleSheet.create({
     borderRadius: Radii.full,
     backgroundColor: '#F3F4F6',
     gap: 4,
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
   },
   catTabActive: {
     backgroundColor: Colors.primary,
@@ -1093,6 +1240,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E9D5FF',
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
   },
   catalogItemIcon: {
     fontSize: 32,
@@ -1126,8 +1275,26 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: Radii.md,
     gap: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E9D5FF',
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
+  },
+  templateCardActive: {
+    backgroundColor: '#FFE4E6',
+    borderColor: Colors.primary,
+    borderWidth: 2,
+  },
+  activeTag: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    backgroundColor: '#FFF0F3',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
   },
   templateIcon: {
     fontSize: 32,
@@ -1165,6 +1332,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     borderWidth: 2,
     borderColor: '#E5E7EB',
+    cursor: 'pointer' as any,
   },
   settingColorBtnActive: {
     borderColor: Colors.primary,
@@ -1181,15 +1349,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: '#F3F4F6',
     borderRadius: Radii.full,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    cursor: 'pointer' as any,
+    userSelect: 'none' as any,
   },
   optionChipActive: {
     backgroundColor: '#FFE4E6',
     borderColor: Colors.primary,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   optionChipText: {
     fontSize: 11,
     fontWeight: '700',
     color: Colors.deepPurple,
+  },
+  optionChipTextActive: {
+    color: Colors.primary,
   },
 });
