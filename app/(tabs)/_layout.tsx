@@ -32,6 +32,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="render3d"
+        options={{
+          title: '3D Render',
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🎬</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
