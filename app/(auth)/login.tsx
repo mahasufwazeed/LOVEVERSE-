@@ -15,20 +15,22 @@ import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, loginAsDemo, isLoading } = useAuthStore();
+  const { signIn, loginAsUser, isLoading } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSignIn = async () => {
+    setErrorMessage(null);
     if (!email.trim() || !password) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
+      setErrorMessage('Please enter both your email address and password.');
       return;
     }
 
     const res = await signIn(email.trim(), password);
     if (res.error) {
-      Alert.alert('Sign In Failed', res.error);
+      setErrorMessage(res.error);
     }
   };
 
@@ -41,13 +43,25 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.form}>
+        {errorMessage ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          </View>
+        ) : null}
+
         <Input
           label="Email Address"
           placeholder="your.email@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(val) => {
+            setEmail(val);
+            if (errorMessage) setErrorMessage(null);
+          }}
         />
 
         <Input
@@ -55,7 +69,10 @@ export default function LoginScreen() {
           placeholder="••••••••"
           secureTextEntry
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(val) => {
+            setPassword(val);
+            if (errorMessage) setErrorMessage(null);
+          }}
         />
 
         <Button
@@ -65,12 +82,31 @@ export default function LoginScreen() {
           style={{ marginTop: Spacing.md }}
         />
 
-        <Button
-          title="✨ Explore Demo Space (Instant Access)"
-          variant="secondary"
-          onPress={() => loginAsDemo()}
-          style={{ marginTop: Spacing.sm }}
-        />
+        {/* Quick Demo Pairing Access */}
+        <View style={styles.demoSection}>
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR QUICK SIGN IN</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <Text style={styles.demoSubtitle}>
+            Select a test account to experience the Him & Her Unique ID pairing flow instantly:
+          </Text>
+
+          <Button
+            title="❤️ Sign In as Alex (Him — LV-A7K92MP4TX)"
+            variant="secondary"
+            onPress={() => loginAsUser('him')}
+            style={{ marginTop: Spacing.xs }}
+          />
+
+          <Button
+            title="💖 Sign In as Emma (Her — LV-M4R81X92PL)"
+            variant="outline"
+            onPress={() => loginAsUser('her')}
+            style={{ marginTop: Spacing.sm }}
+          />
+        </View>
 
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>New to LoveVerse? </Text>
@@ -90,14 +126,14 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-    paddingTop: 80,
+    paddingTop: 60,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   logo: {
     fontSize: 52,
@@ -117,6 +153,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: Spacing.lg,
     borderRadius: Radii.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  errorBanner: {
+    backgroundColor: '#FFF2F5',
+    borderColor: Colors.primary,
+    borderWidth: 1,
+    borderRadius: Radii.md,
+    padding: Spacing.sm,
+    marginBottom: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorIcon: {
+    fontSize: 16,
+  },
+  errorText: {
+    color: '#C2185B',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  demoSection: {
+    marginTop: Spacing.lg,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#EBEBEB',
+  },
+  dividerText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 1,
+    marginHorizontal: Spacing.sm,
+  },
+  demoSubtitle: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
   footerRow: {
     flexDirection: 'row',
