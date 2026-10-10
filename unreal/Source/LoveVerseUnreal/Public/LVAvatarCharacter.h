@@ -6,7 +6,9 @@
 #include "LVAvatarCharacter.generated.h"
 
 class UCameraComponent;
+class USpringArmComponent;
 class UStaticMeshComponent;
+class ULVInteractionComponent;
 
 UCLASS(Blueprintable)
 class LOVEVERSEUNREAL_API ALVAvatarCharacter : public ACharacter
@@ -23,10 +25,18 @@ public:
     void SetExpression(ELVFacialExpression NewExpression);
 
     UFUNCTION(BlueprintCallable)
-    void PlayInteractionPose(ELVCoupleInteraction Interaction, bool bIsPartner);
+    virtual void PlayInteractionPose(ELVCoupleInteraction Interaction, bool bIsPartner);
 
     UFUNCTION(BlueprintCallable)
     void SetLookAtTarget(FVector TargetLocation);
+
+    UFUNCTION(BlueprintCallable)
+    void SetAvatarProportions(float HeightScale, float BodyScale);
+
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    UFUNCTION(BlueprintPure)
+    ULVInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
 
 protected:
     virtual void BeginPlay() override;
@@ -55,7 +65,20 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     UStaticMeshComponent* RightLeg;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LoveVerse|Camera")
+    USpringArmComponent* CameraBoom;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LoveVerse|Camera")
+    UCameraComponent* FollowCamera;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LoveVerse|Interaction")
+    ULVInteractionComponent* InteractionComponent;
+
 private:
+    void MoveForward(float Value);
+    void MoveRight(float Value);
+    void Turn(float Value);
+    void LookUp(float Value);
     void ApplyColor(UStaticMeshComponent* Component, const FLinearColor& Color);
     FRotator ArmPoseForInteraction(ELVCoupleInteraction Interaction, bool bLeftArm, bool bIsPartner) const;
 };

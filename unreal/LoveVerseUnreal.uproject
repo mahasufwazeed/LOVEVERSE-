@@ -14,10 +14,6 @@
     {
       "Name": "PixelStreaming",
       "Enabled": true
-    },
-    {
-      "Name": "HttpBlueprint",
-      "Enabled": true
     }
   ]
 }

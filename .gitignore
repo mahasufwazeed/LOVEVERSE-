@@ -24,3 +24,14 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 Thumbs.db
+
+# Unreal Engine generated artifacts
+unreal/Binaries/
+unreal/DerivedDataCache/
+unreal/Intermediate/
+unreal/Saved/
+unreal/.vs/
+unreal/*.sln
+unreal/*.vcxproj
+unreal/*.opensdf
+unreal/*.sdf

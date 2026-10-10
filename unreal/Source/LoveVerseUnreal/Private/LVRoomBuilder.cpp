@@ -18,6 +18,7 @@ void ALVRoomBuilder::OnConstruction(const FTransform& Transform)
 
 void ALVRoomBuilder::BuildDefaultCoupleRoom()
 {
+    ClearGeneratedMeshes();
     AddRoomMesh(TEXT("Floor"), FVector(0, 0, -6), FVector(7.0f, 6.0f, 0.12f), FLinearColor(0.86f, 0.72f, 0.56f, 1));
     AddRoomMesh(TEXT("BackWall"), FVector(0, 310, 160), FVector(7.0f, 0.12f, 3.2f), FLinearColor(1.0f, 0.94f, 0.97f, 1));
     AddRoomMesh(TEXT("LeftWall"), FVector(-360, 0, 160), FVector(0.12f, 6.0f, 3.2f), FLinearColor(0.98f, 0.92f, 1.0f, 1));
@@ -28,12 +29,25 @@ void ALVRoomBuilder::BuildDefaultCoupleRoom()
     AddRoomMesh(TEXT("TvScreen"), FVector(180, 298, 180), FVector(1.7f, 0.06f, 1.0f), FLinearColor(0.04f, 0.05f, 0.09f, 1));
 }
 
+void ALVRoomBuilder::ClearGeneratedMeshes()
+{
+    for (UStaticMeshComponent* Mesh : GeneratedMeshes)
+    {
+        if (Mesh)
+        {
+            Mesh->DestroyComponent();
+        }
+    }
+    GeneratedMeshes.Empty();
+}
+
 UStaticMeshComponent* ALVRoomBuilder::AddRoomMesh(const FString& Name, FVector Location, FVector Scale, FLinearColor Color)
 {
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
     UStaticMeshComponent* Mesh = NewObject<UStaticMeshComponent>(this, FName(*Name));
     Mesh->SetupAttachment(RootComponent);
     Mesh->RegisterComponent();
+    GeneratedMeshes.Add(Mesh);
     Mesh->SetRelativeLocation(Location);
     Mesh->SetRelativeScale3D(Scale);
     Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

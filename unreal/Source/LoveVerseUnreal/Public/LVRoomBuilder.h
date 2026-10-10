@@ -21,5 +21,9 @@ protected:
     virtual void OnConstruction(const FTransform& Transform) override;
 
 private:
+    void ClearGeneratedMeshes();
     UStaticMeshComponent* AddRoomMesh(const FString& Name, FVector Location, FVector Scale, FLinearColor Color);
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UStaticMeshComponent>> GeneratedMeshes;
 };

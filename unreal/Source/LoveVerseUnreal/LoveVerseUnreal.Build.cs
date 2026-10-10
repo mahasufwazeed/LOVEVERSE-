@@ -12,10 +12,13 @@ public class LoveVerseUnreal : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
+            "EnhancedInput",
             "HTTP",
             "Json",
             "JsonUtilities",
-            "PixelStreaming"
+            "PixelStreaming",
+            "Networking",
+            "Sockets"
         });
     }
 }
