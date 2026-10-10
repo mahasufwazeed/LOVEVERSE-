@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-nati
 import { Colors, Radii, Spacing, Shadows } from '../../constants/theme';
 import { CoupleAvatarScene } from '../../components/world/CoupleAvatarScene';
 import { RoomCreator3D } from '../../components/world/RoomCreator3D';
+import { UnrealRenderLauncher } from '../../components/world/UnrealRenderLauncher';
 import { FloatingHearts } from '../../components/ui/FloatingHearts';
 import { AvatarCustomizer } from '../../components/avatars/AvatarCustomizer';
 import { Button } from '../../components/ui/Button';
@@ -93,6 +94,8 @@ export default function WorldScreen() {
         <Card style={styles.canvasCard}>
           <RoomCreator3D />
         </Card>
+
+        <UnrealRenderLauncher coupleId={couple?.id} userId={profile?.id} />
 
         {/* 10 Coordinated Couple Interactions Grid */}
         <View style={styles.sectionHeaderRow}>
@@ -255,73 +258,3 @@ const styles = StyleSheet.create({
   },
   actionChipActive: {
     backgroundColor: Colors.primarySoft,
-    borderColor: Colors.primary,
-    borderWidth: 2,
-    transform: [{ scale: 1.03 }],
-  },
-  actionIcon: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textDark,
-  },
-  actionLabelActive: {
-    color: Colors.primary,
-  },
-  expressionsScroll: {
-    marginVertical: Spacing.xs,
-  },
-  exprChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: Radii.full,
-    marginRight: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    cursor: 'pointer' as any,
-    userSelect: 'none' as any,
-  },
-  exprChipActive: {
-    backgroundColor: '#F3E8FF',
-    borderColor: Colors.lavender,
-    borderWidth: 2,
-  },
-  exprIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  exprLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textDark,
-  },
-  exprLabelActive: {
-    color: Colors.deepPurple,
-  },
-  avatarCard: {
-    marginTop: Spacing.md,
-  },
-  avatarCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  avatarCardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.textDark,
-  },
-  avatarCardSub: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 3,
-    marginRight: Spacing.sm,
-    lineHeight: 16,
-  },
-});
